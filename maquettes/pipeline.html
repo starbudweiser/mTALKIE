@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Pipeline mTALKIE → mCASTING</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif;background:#0b0b0d;color:#f5f5f7;-webkit-font-smoothing:antialiased;padding:24px 28px 60px}
+h1{font-size:20px;margin-bottom:4px}h1 b,.mt{color:#22c55e}.mc{color:#f08a52}
+h2{font-size:16px;margin:34px 0 10px}
+p.lead{color:#98989f;max-width:980px}
+.grid{display:flex;flex-wrap:wrap;gap:28px;margin-top:16px}
+figure{display:flex;flex-direction:column;gap:8px}
+figcaption{color:#98989f;font-size:12px;max-width:620px}figcaption b{color:#f5f5f7}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:10px}
+
+/* ---------- mTALKIE : Socle standard ---------- */
+.S{--bg:#131316;--sunk:#0c0c0e;--surf:#1c1c1f;--raised:#232327;--hover:#2c2c31;--ctl:#2c2c31;--bd:#303035;--t:#f5f5f7;--t2:#98989f;--fill:#0369a1;--at:#409cff;--act:#fbbf24;--ok:#30d158;--warn:#ff9f0a;--m:#22c55e}
+.S.win{width:620px;height:420px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;overflow:hidden;display:grid;grid-template-columns:170px 1fr;grid-template-rows:34px 1fr 44px;font-size:11px;position:relative;color:var(--t)}
+.S .bar{grid-column:1/3;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--raised);border-bottom:1px solid var(--bd)}
+.l{display:flex;gap:5px}.l i{width:9px;height:9px;border-radius:50%;background:#ff5f57}.l i+i{background:#febc2e}.l i+i+i{background:#28c840}
+.S .brand{font-weight:700;font-size:12px;margin-left:4px}.S .brand b{color:var(--m)}
+.sp{margin-left:auto}
+.S .btn{background:var(--ctl);border-radius:4px;padding:3px 8px;font-weight:500;white-space:nowrap}
+.S .btn.act{background:var(--act);color:#1a1a1a;font-weight:600}
+.S .btn.fill{background:var(--fill);color:#fff}
+.S .side{background:var(--raised);border-right:1px solid var(--bd);padding:9px;display:flex;flex-direction:column;gap:9px}
+.S .h{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--t2);margin-bottom:4px}
+.S .kv{display:flex;justify-content:space-between;padding:1.5px 0}.S .kv span{color:var(--t2)}
+.S .main{padding:9px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.S .foot{grid-column:1/3;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--raised);border-top:1px solid var(--bd)}
+.S .tbl{background:var(--surf);border:1px solid var(--bd);border-radius:4px;overflow:hidden}
+.S .tr{display:grid;grid-template-columns:12px 12px 70px 1fr 34px;gap:6px;align-items:center;padding:3px 7px;border-bottom:1px solid var(--bd)}
+.S .tr.th{color:var(--t2);font-size:9px;text-transform:uppercase}
+.S .tr.sel{background:#232a33}
+.S .cb{width:10px;height:10px;border:1px solid var(--t2);border-radius:2px}.S .sel .cb{background:var(--fill);border-color:var(--fill)}
+.S .field{background:var(--sunk);padding:4px 8px;border-radius:3px;font-size:10.5px}
+.S .t2{color:var(--t2)}.S .ok{color:var(--ok)}.S .warn{color:var(--warn)}.S .at{color:var(--at)}
+.S .scrim{position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center}
+.S .sheet{width:440px;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.S .sheet h3{font-size:13px}
+.S .pb{height:8px;background:var(--sunk);border-radius:4px;position:relative;overflow:hidden}
+.S .pb i{position:absolute;top:0;bottom:0;background:var(--ok)}
+.S .pb u{position:absolute;top:0;bottom:0;border-left:1px dashed var(--t2);border-right:1px dashed var(--t2);left:50%;width:33%}
+.S .seg{display:inline-flex;background:var(--sunk);border-radius:4px;padding:2px}.S .seg span{padding:2px 8px;border-radius:3px;color:var(--t2)}.S .seg span.on{background:var(--fill);color:#fff}
+.S .menu{position:absolute;right:10px;bottom:40px;width:230px;background:var(--raised);border:1px solid var(--bd);border-radius:6px;padding:4px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.S .menu div{padding:5px 8px;border-radius:4px}.S .menu div.hl{background:var(--fill);color:#fff}.S .menu small{display:block;color:var(--t2);font-size:9.5px}.S .menu .hl small{color:#cfe6f5}
+.S .chk{display:flex;gap:6px;align-items:flex-start}.S .chk i{width:10px;height:10px;border-radius:2px;background:var(--fill);flex:none;margin-top:2px}
+.S .pill{padding:1px 6px;border-radius:3px;background:var(--ctl);font-size:9.5px}
+
+/* ---------- mCASTING : Flat Mat ---------- */
+.F{--rw:12px;--rb:12px;--rc:8px;--rch:999px;--bg:#f4f1ec;--card:#fff;--ctl:#ebe6de;--t:#26231e;--t2:#7b756a;--acc:#26231e;--onacc:#f4f1ec;--m:#d9622b;--ok:#3f8f5a;--warn:#b7791f;--bd:1px solid #e3ddd2}
+.F.dk{--bg:#131316;--card:#232327;--ctl:#2c2c31;--t:#f5f5f7;--t2:#98989f;--acc:#0a84ff;--onacc:#fff;--m:#f08a52;--ok:#30d158;--warn:#ff9f0a;--bd:1px solid #303035}
+.F.win{width:1000px;height:600px;display:grid;grid-template-columns:180px 1fr;grid-template-rows:auto 1fr;overflow:hidden;position:relative;background:var(--bg);color:var(--t);border-radius:var(--rw);box-shadow:0 18px 50px rgba(0,0,0,.4);font-size:12.5px}
+.F .bar{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:var(--bd)}
+.F .brand{font-weight:700;font-size:15px;margin-left:8px}.F .brand b{color:var(--m)}
+.F .right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--t2);font-size:12px}
+.F .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.F .btn{background:var(--ctl);color:var(--t);padding:5px 11px;border-radius:var(--rc);font-weight:500;white-space:nowrap}
+.F .btn.pri{background:var(--acc);color:var(--onacc)}.F .btn.sm{padding:3px 9px;font-size:11px}
+.F .nav{padding:12px 10px;display:flex;flex-direction:column;gap:4px;border-right:var(--bd)}
+.F .nav div{padding:7px 10px;border-radius:var(--rc);color:var(--t2)}
+.F .nav div.on{background:var(--ctl);color:var(--t);font-weight:600}
+.F .nav .new{display:inline-block;margin-left:4px;font-size:9.5px;padding:1px 6px;border-radius:99px;background:var(--m);color:#fff;font-weight:600}
+.F .h{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:6px}
+.F .main{padding:14px;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
+.F .toolbar{display:flex;gap:8px;align-items:center}
+.F .search{flex:1;background:var(--ctl);border-radius:var(--rc);padding:7px 11px;color:var(--t)}
+.F .box{background:var(--card);border:var(--bd);border-radius:var(--rb);padding:10px}
+.F .chips{display:flex;flex-wrap:wrap;gap:5px}
+.F .chip{padding:3px 9px;border-radius:var(--rch);background:var(--ctl);font-size:11px}
+.F .chip.on{background:var(--acc);color:var(--onacc);font-weight:600}
+.F .fl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.F .fl>span{color:var(--t2);font-size:11px;min-width:58px}
+.F .tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:var(--rch);background:var(--ctl);color:var(--t2);white-space:nowrap}
+.F .tag.ok{background:color-mix(in srgb,var(--ok) 20%,transparent);color:var(--ok)}
+.F .tag.m{background:color-mix(in srgb,var(--m) 20%,transparent);color:var(--m)}
+.F .list{display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.F .ln{background:var(--card);border:var(--bd);border-radius:var(--rb);padding:8px 10px;display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center}
+.F .ln.on{outline:2px solid var(--acc)}
+.F .play{width:24px;height:24px;border-radius:50%;background:var(--acc);color:var(--onacc);display:grid;place-items:center;font-size:9px}
+.F .q{font-size:13px}.F .sub{color:var(--t2);font-size:11px;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.F .pop{position:absolute;right:30px;top:198px;width:270px;background:var(--card);border:var(--bd);border-radius:var(--rb);box-shadow:0 18px 50px rgba(0,0,0,.3);padding:10px;display:flex;flex-direction:column;gap:6px}
+.F .pop .it{padding:6px 8px;border-radius:var(--rc)}.F .pop .it.hl{background:var(--ctl)}
+.F .cols{display:grid;grid-template-columns:260px 1fr;gap:12px;min-height:0;flex:1}
+.F .note{background:var(--ctl);border-radius:var(--rc);padding:7px 10px;color:var(--t2);font-size:11px}
+.F .vc{background:var(--card);border:var(--bd);border-radius:var(--rb);padding:10px;display:flex;flex-direction:column;gap:6px}
+.F .vc.on{outline:2px solid var(--ok)}
+.F .wave{display:flex;align-items:center;gap:1.5px;height:20px;flex:1}.F .wave i{display:block;width:2.5px;border-radius:2px;background:var(--t2);opacity:.6}
+.F .toast{position:absolute;right:16px;bottom:16px;background:var(--acc);color:var(--onacc);border-radius:var(--rb);padding:10px 14px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.thm{display:inline-flex;background:#222;border-radius:999px;padding:3px;margin-left:10px;vertical-align:middle}
+.thm button{border:0;background:none;color:#eee;font:inherit;font-size:12px;padding:3px 12px;border-radius:999px;cursor:pointer}.thm button.on{background:#444}
+
+/* ---------- Architecture ---------- */
+.arch{background:#1c1c1f;border:1px solid #303035;border-radius:6px;padding:18px 22px;max-width:1150px}
+.arch table{border-collapse:collapse;width:100%;margin:6px 0 4px}
+.arch td,.arch th{text-align:left;padding:6px 10px;border-bottom:1px solid #303035;vertical-align:top}
+.arch th{color:#98989f;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.arch code{font-family:"SF Mono",Menlo,monospace;font-size:12px;color:#409cff}
+.flow{font-family:"SF Mono",Menlo,monospace;font-size:12px;background:#0c0c0e;padding:12px 14px;white-space:pre;overflow-x:auto;margin:8px 0;border-radius:4px}
+.arch ul{margin:6px 0 0 18px}.arch li{margin:3px 0}
+.warnbox{border:1px solid #ff9f0a;padding:10px 14px;border-radius:4px;margin-top:12px;max-width:1150px}.warnbox b{color:#ff9f0a}
+</style></head><body>
+
+<h1>Pipeline <span class="mt">m</span>TALKIE → <span class="mc">m</span>CASTING : maquettes et architecture</h1>
+<p class="lead">mTALKIE envoie deux choses à mCASTING : des <b>voix à cloner</b>, que tu nommes avant l'envoi, et des <b>répliques</b> (texte et audio). mCASTING les range dans sa bibliothèque de voix et dans une nouvelle <b>base de répliques</b> qu'on peut chercher. Par le serveur MCP de mCASTING, je cherche ensuite des répliques et je les attribue aux personnages de tes projets. Chaque appli garde son design : Socle standard pour mTALKIE, Flat Mat pour mCASTING.</p>
+
+<h2>1. mTALKIE : envoyer à mCASTING</h2>
+<div class="grid">
+
+<figure><div class="S win">
+ <div class="bar"><div class="l"><i></i><i></i><i></i></div><div class="brand"><b>m</b>TALKIE</div><span class="sp t2">Monkey Island 2 SE · anglais · 7 214</span><span class="btn">Ouvrir…</span></div>
+ <div class="side"><div><div class="h">Fichier</div><div class="kv">Format <b>XWB</b></div><div class="kv">Répliques <b>7 214</b></div><div class="kv">Textes <b class="ok">✓ 98 %</b></div></div>
+  <div><div class="h">Sélection</div><div class="kv">Répliques <b>6</b></div><div class="kv">Durée <b>19,4 s</b></div><div class="kv">Personnage <b>Guybrush</b></div></div></div>
+ <div class="main"><div style="display:flex;gap:6px"><div class="field t2" style="flex:1">⌕ guybrush</div><span class="btn">Tout sélect.</span></div>
+  <div class="tbl"><div class="tr th"><span></span><span></span><span>Nom</span><span>Texte</span><span>Durée</span></div>
+  <div class="tr sel"><span class="cb"></span><span>▶</span><span class="mono">gb_0412</span><span>I'm Guybrush Threepwood, mighty pirate!</span><span>2,8 s</span></div>
+  <div class="tr sel"><span class="cb"></span><span>▶</span><span class="mono">gb_0413</span><span>How appropriate. You fight like a cow.</span><span>3,1 s</span></div>
+  <div class="tr sel"><span class="cb"></span><span>▶</span><span class="mono">gb_0588</span><span>I'm selling these fine leather jackets.</span><span>2,4 s</span></div>
+  <div class="tr sel"><span class="cb"></span><span>▶</span><span class="mono">gb_0731</span><span>Look behind you, a three-headed monkey!</span><span>3,6 s</span></div>
+  <div class="tr"><span class="cb"></span><span>▶</span><span class="mono">gb_0732</span><span>Ahhh!</span><span>0,6 s</span></div>
+  <div class="tr sel"><span class="cb"></span><span>▶</span><span class="mono">gb_0901</span><span>That's the second biggest monkey head I've ever seen!</span><span>4,2 s</span></div>
+  <div class="tr sel"><span class="cb"></span><span>▶</span><span class="mono">gb_1015</span><span>Could you tell me the way to the governor's mansion?</span><span>3,3 s</span></div>
+  </div></div>
+ <div class="foot"><span class="t2">6 sélectionnées</span><span class="sp btn">Exporter…</span><span class="btn act">Envoyer à mCASTING ▾</span></div>
+ <div class="menu"><div class="hl">Voix à cloner…<small>Nommer la voix, assembler un extrait de 15 à 25 s</small></div><div>Répliques vers la base…<small>Texte, audio, personnage et étiquettes</small></div></div>
+</div><figcaption><b>A. Liste et bouton « Envoyer à mCASTING ».</b> Un nouveau bouton dans la barre du bas, à côté d'« Exporter… ». Il ouvre un menu de deux choix et s'applique à la sélection. Une réplique trop courte comme « Ahhh! » est laissée de côté pour le clonage. Le bouton est grisé si mCASTING n'est pas installé.</figcaption></figure>
+
+<figure><div class="S win">
+ <div class="bar"><div class="l"><i></i><i></i><i></i></div><div class="brand"><b>m</b>TALKIE</div></div>
+ <div class="side"></div><div class="main"></div><div class="foot"></div>
+ <div class="scrim"><div class="sheet">
+  <h3>Voix à cloner pour <b class="mc">m</b>CASTING</h3>
+  <div><div class="t2" style="margin-bottom:3px">Nom de la voix</div><div class="field" style="color:var(--t)">Guybrush (MI2)</div></div>
+  <div style="display:flex;gap:8px"><div style="flex:1"><div class="t2" style="margin-bottom:3px">Langue</div><div class="seg"><span class="on">EN</span><span>FR</span><span>ES</span><span>IT</span></div></div>
+   <div style="flex:1"><div class="t2" style="margin-bottom:3px">Description</div><div class="field t2">homme jeune, enjoué, naïf</div></div></div>
+  <div><div style="display:flex;justify-content:space-between"><span class="t2">Extrait assemblé</span><b class="ok">19,4 s ✓</b></div>
+   <div class="pb" style="margin-top:4px"><u></u><i style="left:0;width:65%"></i></div>
+   <div class="mono t2" style="display:flex;justify-content:space-between;margin-top:2px"><span>0 s</span><span>15 s</span><span>25 s</span><span>30 s</span></div></div>
+  <div class="field mono t2" style="line-height:1.5">« I'm Guybrush Threepwood, mighty pirate! How appropriate. You fight like a cow. I'm selling these fine leather jackets… »</div>
+  <div class="t2" style="font-size:10px">Le texte de référence vient des sous-titres du jeu : pas de transcription à faire. Silence de 0,3 s entre deux répliques, volume égalisé.</div>
+  <div style="display:flex;gap:6px"><span class="btn">▶ Écouter l'extrait</span><span class="btn">Ordre…</span></div>
+  <div class="chk"><i></i><span>Je certifie avoir le droit d'utiliser cette voix (usage privé, essais).</span></div>
+  <div style="display:flex;gap:6px;justify-content:flex-end"><span class="btn">Annuler</span><span class="btn fill">Envoyer à mCASTING</span></div>
+ </div></div>
+</div><figcaption><b>B. Voix à cloner.</b> Tu nommes la voix, puis mTALKIE assemble les répliques choisies en un seul extrait. La jauge passe au vert entre 15 et 25 s, la plage que mCASTING attend. Au-delà de 25 s, les dernières répliques sont écartées. L'envoi est impossible sans la case de droits, comme dans mCASTING.</figcaption></figure>
+
+<figure><div class="S win">
+ <div class="bar"><div class="l"><i></i><i></i><i></i></div><div class="brand"><b>m</b>TALKIE</div></div>
+ <div class="side"></div><div class="main"></div><div class="foot"></div>
+ <div class="scrim"><div class="sheet">
+  <h3>Répliques vers la base de <b class="mc">m</b>CASTING</h3>
+  <div style="display:flex;gap:10px;align-items:center"><span class="t2">Envoyer</span><div class="seg"><span>Sélection (6)</span><span class="on">Tout le jeu (7 214)</span></div></div>
+  <div class="kv"><span>Jeu</span><b>Monkey Island 2 : LeChuck's Revenge SE</b></div>
+  <div class="kv"><span>Langues</span><b>EN · FR · DE · ES · IT</b></div>
+  <div class="kv"><span>Avec texte</span><b class="ok">7 069 (98 %)</b></div>
+  <div class="kv"><span>Personnage reconnu</span><b class="warn">5 402 (75 %)</b></div>
+  <div class="tbl" style="margin-top:2px"><div class="tr th" style="grid-template-columns:1fr 90px 50px"><span>Préfixe du fichier</span><span>Personnage</span><span>Lignes</span></div>
+   <div class="tr" style="grid-template-columns:1fr 90px 50px"><span class="mono">gb_</span><span>Guybrush</span><span>2 310</span></div>
+   <div class="tr" style="grid-template-columns:1fr 90px 50px"><span class="mono">lc_</span><span>LeChuck</span><span>412</span></div>
+   <div class="tr" style="grid-template-columns:1fr 90px 50px"><span class="mono">wl_</span><span class="at">Wally ✎</span><span>188</span></div>
+   <div class="tr" style="grid-template-columns:1fr 90px 50px"><span class="mono">x17_</span><span class="t2">inconnu ✎</span><span>1 812</span></div></div>
+  <div class="chk"><i></i><span>Joindre l'audio (WAV) <span class="t2">· 1,9 Go ; sinon le texte seul et un lien vers le fichier du jeu</span></span></div>
+  <div class="chk"><i></i><span>Étiqueter automatiquement <span class="t2">(rire, cri, insulte, salut, question… d'après le texte)</span></span></div>
+  <div style="display:flex;gap:6px;justify-content:flex-end"><span class="btn">Annuler</span><span class="btn fill">Envoyer 7 214 répliques</span></div>
+ </div></div>
+</div><figcaption><b>C. Répliques vers la base.</b> Les noms de fichiers trouvent le personnage quand le jeu en donne un indice, comme les préfixes <span class="mono">gb_</span> et <span class="mono">lc_</span>. Tu corriges ou nommes les autres préfixes d'un clic (✎), et mTALKIE retient ces noms pour le jeu. Choix de l'audio : copie WAV, ou lien vers le fichier du jeu, beaucoup plus léger, l'audio étant alors décodé à l'écoute.</figcaption></figure>
+</div>
+
+<h2>2. mCASTING : base de répliques <span class="thm"><button class="on" onclick="th(0)">Clair</button><button onclick="th(1)">Sombre</button></span></h2>
+<div class="grid">
+
+<figure><div class="F win">
+ <div class="bar"><div class="l"><i></i><i></i><i></i></div><div class="brand"><b>m</b>CASTING</div><div class="right"><span class="dot"></span>Calcul : libre</div></div>
+ <div class="nav"><div class="h">Navigation</div><div>▤ Projets</div><div>◉ Casting</div><div>♫ Bibliothèque de voix</div><div class="on">❝ Répliques<span class="new">nouveau</span></div><div>⬇ Modèles TTS</div>
+  <div class="h" style="margin-top:14px">Sources</div><div style="padding:3px 10px;font-size:11.5px">MI2 SE · 7 214</div><div style="padding:3px 10px;font-size:11.5px">EMI · 9 429</div><div style="padding:3px 10px;font-size:11.5px">The Dig · 3 102</div><div style="padding:3px 10px;font-size:11.5px">King's Quest VI · 4 860</div><div style="padding:3px 10px;font-size:11.5px;color:var(--t2)">+ 4 jeux</div></div>
+ <div class="main">
+  <div class="toolbar"><div class="search">⌕ « monkey »</div><span class="tag">48 211 répliques</span><span class="tag ok">63 trouvées</span><span class="btn">Exporter…</span></div>
+  <div class="box"><div class="fl"><span>Jeu</span><div class="chips"><span class="chip on">Tous</span><span class="chip">MI2 SE</span><span class="chip">EMI</span><span class="chip">The Dig</span><span class="chip">KQ6</span><span class="chip">DOTT</span></div></div>
+   <div class="fl" style="margin-top:6px"><span>Étiquettes</span><div class="chips"><span class="chip">Rire</span><span class="chip">Cri</span><span class="chip on">Insulte</span><span class="chip">Salut</span><span class="chip">Question</span><span class="chip">Menace</span><span class="chip">Réplique culte</span></div></div>
+   <div class="fl" style="margin-top:6px"><span>Langue</span><div class="chips"><span class="chip on">EN</span><span class="chip">FR</span><span class="chip">ES</span><span class="chip">IT</span></div><span style="margin-left:10px;color:var(--t2);font-size:11px">Durée</span><div class="chips"><span class="chip">&lt; 2 s</span><span class="chip on">2-6 s</span><span class="chip">&gt; 6 s</span></div></div></div>
+  <div class="list">
+   <div class="ln on"><div class="play">▶</div><div><div class="q">« Look behind you, a three-headed monkey! »</div><div class="sub">Guybrush · MI2 SE · 3,6 s <span class="tag">Réplique culte</span><span class="tag ok">→ Capitaine Loutre (wSHOWCASE)</span></div></div><span class="btn sm pri">Attribuer…</span></div>
+   <div class="ln"><div class="play">▶</div><div><div class="q">« You fight like a dairy farmer. »</div><div class="sub">Pirate · MI2 SE · 2,2 s <span class="tag">Insulte</span></div></div><span class="btn sm">Attribuer…</span></div>
+   <div class="ln"><div class="play">▶</div><div><div class="q">« That's the second biggest monkey head I've ever seen! »</div><div class="sub">Guybrush · MI2 SE · 4,2 s <span class="tag">Réplique culte</span></div></div><span class="btn sm">Attribuer…</span></div>
+   <div class="ln"><div class="play">▶</div><div><div class="q">« Monkeys? On this island? Preposterous. »</div><div class="sub">Elaine · EMI · 2,9 s <span class="tag">Question</span></div></div><span class="btn sm">Attribuer…</span></div>
+   <div class="ln"><div class="play">▶</div><div><div class="q">« Never trust a monkey with a banana. »</div><div class="sub"><span style="color:var(--warn)">inconnu</span> · EMI · 2,5 s <span class="tag m">texte seul</span></div></div><span class="btn sm">Attribuer…</span></div>
+  </div>
+ </div>
+ <div class="pop"><div class="h">Attribuer à un personnage</div><div class="it">▤ Jeu point &amp; click — wSHOWCASE</div><div class="it hl">◉ Capitaine Loutre <span class="tag ok">voix : Guybrush (MI2)</span></div><div class="it">◉ Garde de la ville</div><div class="it">◉ Marchande</div>
+  <div class="note">Mode : <b>inspiration</b> (réécrite avant d'être jouée) ou <b>texte d'origine</b> (essais privés).</div><div style="display:flex;justify-content:flex-end;gap:6px"><span class="btn sm">Annuler</span><span class="btn sm pri">Attribuer</span></div></div>
+</div><figcaption><b>D. Nouvel écran « Répliques ».</b> Recherche plein texte instantanée sur tous les jeux reçus, avec des filtres par jeu, étiquette, langue et durée. Écoute en un clic. « Attribuer… » range la réplique chez un personnage d'un projet, en mode <b>inspiration</b> ou <b>texte d'origine</b>. Sources dans la colonne de gauche, avec leur nombre de répliques. « Exporter… » produit un CSV ou un JSON, avec ou sans l'audio.</figcaption></figure>
+
+<figure><div class="F win" style="width:1000px">
+ <div class="bar"><div class="l"><i></i><i></i><i></i></div><div class="brand"><b>m</b>CASTING</div><div class="right"><span class="dot"></span>Calcul : libre</div></div>
+ <div class="nav"><div class="h">Navigation</div><div>▤ Projets</div><div class="on">◉ Casting</div><div>♫ Bibliothèque de voix</div><div>❝ Répliques</div><div>⬇ Modèles TTS</div></div>
+ <div class="main"><div class="toolbar"><div style="font-size:15px;font-weight:650">Jeu point &amp; click — wSHOWCASE</div><span class="tag">53 personnages</span><span style="margin-left:auto" class="btn pri">Écrire casting.json ▸ projet</span></div>
+  <div class="cols">
+   <div style="display:flex;flex-direction:column;gap:8px"><div class="h">Personnage</div>
+    <div class="box"><div style="font-weight:650;font-size:14px">Capitaine Loutre</div><div class="sub">pirate vantard, naïf, au grand cœur</div></div>
+    <div class="vc on"><div style="display:flex;justify-content:space-between"><b>Guybrush (MI2)</b><span class="tag ok">voix clonée</span></div><div class="sub">Reçue de mTALKIE · 19,4 s · EN · texte de référence issu des sous-titres</div><div style="display:flex;gap:8px;align-items:center"><div class="play">▶</div><div class="wave">
+     <i style="height:30%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:90%"></i><i style="height:60%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:50%"></i><i style="height:65%"></i><i style="height:25%"></i><i style="height:75%"></i><i style="height:40%"></i><i style="height:85%"></i><i style="height:55%"></i><i style="height:30%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:60%"></i></div></div></div>
+    <div class="note">Les voix reçues de mTALKIE apparaissent dans la bibliothèque, dans un nouveau filtre « Clonées · mTALKIE ».</div></div>
+   <div style="display:flex;flex-direction:column;gap:8px;min-height:0"><div class="toolbar"><div class="h" style="margin:0">Répliques attribuées · 4</div><span style="margin-left:auto" class="btn sm">+ Chercher dans la base</span></div>
+    <div class="ln" style="grid-template-columns:26px 1fr auto auto"><div class="play">▶</div><div><div class="q">« Regardez derrière vous, une loutre à trois têtes ! »</div><div class="sub">inspirée de : <i>Look behind you, a three-headed monkey!</i> · MI2 SE</div></div><span class="tag">inspiration</span><span class="btn sm">Générer</span></div>
+    <div class="ln" style="grid-template-columns:26px 1fr auto auto"><div class="play">▶</div><div><div class="q">« Je suis le Capitaine Loutre, terrible pirate ! »</div><div class="sub">inspirée de : <i>I'm Guybrush Threepwood, mighty pirate!</i></div></div><span class="tag">inspiration</span><span class="btn sm">Générer</span></div>
+    <div class="ln" style="grid-template-columns:26px 1fr auto auto"><div class="play">▶</div><div><div class="q">« Ahhh ! »</div><div class="sub">MI2 SE · gb_0732 · cri</div></div><span class="tag m">texte d'origine</span><span class="btn sm">Générer</span></div>
+    <div class="ln" style="grid-template-columns:26px 1fr auto auto"><div class="play">▶</div><div><div class="q">« How appropriate. You fight like a cow. »</div><div class="sub">MI2 SE · gb_0413 · essai privé</div></div><span class="tag m">texte d'origine</span><span class="btn sm">Générer</span></div>
+    <div class="box"><div class="h">Dans casting.json</div><div class="sub" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;display:block;line-height:1.5">"lines": [{ "text": "Regardez derrière vous…", "source": "mi2se/gb_0731", "mode": "inspiration", "emotion": "panique feinte" }]</div></div>
+   </div></div></div>
+ <div class="toast">✓ Reçu de mTALKIE : voix « Guybrush (MI2) » et 7 214 répliques de MI2 SE</div>
+</div><figcaption><b>E. Le personnage et ses répliques.</b> La voix clonée reçue de mTALKIE est choisie comme d'habitude. Les répliques attribuées, par toi ou par moi, s'ajoutent à la fiche du personnage et partent dans <span class="mono">casting.json</span>. « Générer » les dit avec la voix castée. Une notification en bas annonce chaque envoi de mTALKIE.</figcaption></figure>
+</div>
+
+<h2>3. Architecture</h2>
+<div class="arch">
+<div class="flow"><span class="mt">mTALKIE</span>                          boîte de réception                          <span class="mc">mCASTING</span>
+ sélection ─▶ « Voix à cloner »  ─▶  ~/Library/Application Support/  ─▶  importe seul (au lancement
+ jeu entier ─▶ « Répliques »          mCASTING/Inbox/&lt;paquet&gt;/          et à chaque nouveau paquet)
+                                       manifest.json + audio/*.wav            │
+                                                                              ├─▶ voices.json (voix clonée)
+                                                                              └─▶ lines.sqlite (FTS5)
+                                                                                     ▲
+                    <span style="color:#409cff">Claude</span> ── MCP mcasting : search_lines · assign_line ─────────┘  → casting.json</div>
+<table>
+<tr><th>Élément</th><th>Rôle</th></tr>
+<tr><td><code>Inbox/&lt;paquet&gt;/manifest.json</code></td><td>Contrat entre les deux applis (version 1). <code>kind: "voice"</code> : nom, langue, description, <code>ref_audio</code>, <code>ref_text</code>, source. <code>kind: "lines"</code> : jeu, langues, et pour chaque réplique : clé, texte, personnage, langue, durée, étiquettes, puis <code>audio</code> (WAV copié) ou <code>source</code> (chemin du fichier du jeu et décalage). Un paquet est écrit dans <code>.tmp</code> puis renommé, pour n'être jamais lu à moitié.</td></tr>
+<tr><td><b>mTALKIE</b> <code>Sources/CastingExport.swift</code></td><td>Assemblage de l'extrait (silences de 0,3 s, normalisation, coupe à 25 s), écriture du paquet, noms des préfixes retenus par jeu, étiquetage automatique par mots-clés et ponctuation. Feuilles B et C dans <code>Views.swift</code>, textes dans les 4 langues.</td></tr>
+<tr><td><b>mCASTING</b> <code>Core/LinesStore.swift</code></td><td>Base <code>lines.sqlite</code> : tables <code>games</code>, <code>lines</code> (clé, jeu, personnage, langue, texte, durée, audio ou source) et <code>tags</code>, plus un index plein texte FTS5. SQLite est fourni par macOS : aucune dépendance. Elle tient des centaines de milliers de répliques avec une recherche en moins de 10 ms.</td></tr>
+<tr><td><b>mCASTING</b> <code>Core/InboxImporter.swift</code></td><td>Surveillance de la boîte de réception, import, puis rangement du paquet dans <code>Inbox/traité</code>. Lecture d'un lien <code>source</code> : décodage minimal (WAV, Ogg, MP3), sinon l'appli propose de joindre l'audio.</td></tr>
+<tr><td><b>mCASTING</b> modèle <code>Character.lines</code></td><td>Répliques attribuées : texte joué, réplique d'origine, mode (<code>inspiration</code> ou <code>original</code>), émotion. Écrites dans <code>casting.json</code>.</td></tr>
+<tr><td><b>MCP</b> <code>mcasting-mcp</code></td><td>Nouveaux outils : <code>search_lines</code> (texte, jeu, personnage, étiquettes, langue, durée), <code>get_line</code>, <code>assign_line</code> (projet, personnage, mode, texte réécrit) et <code>list_line_sources</code>. Je m'en sers pour piocher et attribuer des répliques, et pour te proposer des réécritures.</td></tr>
+</table>
+<ul>
+<li><b>Ordre de travail :</b> (1) contrat <code>manifest.json</code> ; (2) côté mCASTING, base, import et écran « Répliques » ; (3) côté mTALKIE, menu et feuilles B et C ; (4) outils MCP ; (5) essais avec MI2 SE et EMI. Deux releases, une par appli.</li>
+<li><b>Ce qui ne change pas :</b> les fichiers des jeux ne sont jamais modifiés. Le clonage existant de mCASTING sert tel quel, le paquet lui fournit seulement l'extrait et le texte.</li>
+<li><b>Applis publiques :</b> aucun chemin ni nom propre à toi dans le code. La boîte de réception est un dossier standard documenté dans les deux README, et n'importe quel outil peut y déposer un paquet.</li>
+</ul>
+</div>
+<div class="warnbox"><b>Droits.</b> Voix d'acteurs et textes des jeux sont protégés : c'est libre pour un usage privé et des essais. Pour une vidéo publiée ou un jeu diffusé, le mode <b>inspiration</b> réécrit la réplique et on la fait dire par une voix de la bibliothèque, pas par la voix clonée de l'acteur. Les deux applis l'indiquent au moment de l'envoi et de l'attribution.</div>
+
+<script>
+function th(d){document.querySelectorAll('.F').forEach(w=>w.classList.toggle('dk',!!d));document.querySelectorAll('.thm button').forEach((b,i)=>b.classList.toggle('on',i==d))}
+</script>
+</body></html>
