@@ -62,7 +62,7 @@ enum Encoder {
 
     /// Nom de fichier d'après le modèle : {file} nom du fichier source, {n} numéro sur 4 chiffres, {offset} décalage hexadécimal.
     static func name(pattern: String, source: URL, line: Line, format: ExportFormat) -> String {
-        var s = pattern.isEmpty ? "{file}_{n}" : pattern
+        var s = pattern.isEmpty ? "{file}_{n}" : Pattern.canonical(pattern)
         s = s.replacingOccurrences(of: "{file}", with: source.deletingPathExtension().lastPathComponent)
         s = s.replacingOccurrences(of: "{n}", with: String(format: "%04d", line.id))
         s = s.replacingOccurrences(of: "{offset}", with: String(format: "%08X", line.offset))
@@ -138,6 +138,29 @@ enum Peaks {
             while i < hi { m = max(m, abs(pcm.samples[i])); i += 1 }
             out[b] = min(1, m)
         }
+        return out
+    }
+}
+
+/// Balises du modèle de nom : forme interne {file} {n} {offset}, affichées dans la langue de l'interface.
+enum Pattern {
+    static let tokens: [String: [String]] = [
+        "fr": ["{fichier}", "{n°}", "{décalage}"], "en": ["{file}", "{n}", "{offset}"],
+        "es": ["{archivo}", "{n.º}", "{posición}"], "it": ["{file}", "{n.}", "{posizione}"],
+    ]
+    static let canonicalTokens = ["{file}", "{n}", "{offset}"]
+    static var local: [String] { tokens[Loc.lang] ?? canonicalTokens }
+
+    static func localize(_ s: String) -> String {
+        var out = s
+        for (c, l) in zip(canonicalTokens, local) { out = out.replacingOccurrences(of: c, with: l) }
+        return out
+    }
+
+    /// Toutes les langues sont acceptées : un modèle tapé en français fonctionne aussi en anglais.
+    static func canonical(_ s: String) -> String {
+        var out = s
+        for (_, list) in tokens { for (l, c) in zip(list, canonicalTokens) where l != c { out = out.replacingOccurrences(of: l, with: c) } }
         return out
     }
 }

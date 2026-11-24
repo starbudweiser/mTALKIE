@@ -52,7 +52,34 @@ final class Store: ObservableObject {
 
     var destination: URL {
         if !exportFolder.isEmpty { return URL(fileURLWithPath: exportFolder) }
-        return FileManager.default.urls(for: .musicDirectory, in: .userDomainMask)[0].appendingPathComponent("mTALKIE")
+        return FileManager.default.urls(for: .musicDirectory, in: .userDomainMask)[0]
+    }
+
+    /// Dossier où l'export écrira : dossier choisi, plus le sous-dossier du jeu si l'option est cochée.
+    var finalFolder: URL {
+        guard subfolder, let b = bank else { return destination }
+        return destination.appendingPathComponent(Self.folderName(b))
+    }
+
+    /// Chemin affiché comme le Finder (noms de dossiers dans la langue du système, « ~ » pour le dossier personnel).
+    static func displayPath(_ url: URL) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        var path = url.standardizedFileURL.path
+        var prefix = ""
+        if path.hasPrefix(home) { prefix = "~"; path = String(path.dropFirst(home.count)) }
+        var built = prefix.isEmpty ? "" : home
+        var parts: [String] = []
+        for c in path.split(separator: "/") {
+            built += "/" + c
+            parts.append(FileManager.default.fileExists(atPath: built) ? FileManager.default.displayName(atPath: built) : String(c))
+        }
+        return prefix + "/" + parts.joined(separator: "/")
+    }
+
+    /// Modèle de nom affiché avec les balises de la langue de l'interface ({fichier}, {n°}, {décalage} en français).
+    var localPattern: String {
+        get { Pattern.localize(pattern) }
+        set { pattern = Pattern.canonical(newValue) }
     }
 
     // MARK: Ouverture
@@ -169,8 +196,7 @@ final class Store: ObservableObject {
         guard let b = bank, !exporting else { return }
         let todo = selectionOnly ? lines.filter { selection.contains($0.id) } : lines
         guard !todo.isEmpty else { return }
-        var folder = destination
-        if subfolder { folder.appendPathComponent(Self.folderName(b)) }
+        let folder = finalFolder
         let fmt = format, pat = pattern
         exporting = true; exportDone = 0; exportTotal = todo.count; exportReport = nil; started = Date()
         BusyFlag.set(true)
@@ -218,7 +244,7 @@ final class Store: ObservableObject {
     func dismissReport() { exportReport = nil }
 
     static func folderName(_ b: SoundBank) -> String {
-        if let g = b.gameName { return g.replacingOccurrences(of: ":", with: " -") }
+        if let g = SoundBank.game(for: b.url)?.short { return g.replacingOccurrences(of: ":", with: " -") }   // « ~/Musique/DOTT », comme la maquette
         return b.url.deletingLastPathComponent().lastPathComponent
     }
 
@@ -241,3 +267,4 @@ enum BusyFlag {
         if on { FileManager.default.createFile(atPath: url.path, contents: nil) } else { try? FileManager.default.removeItem(at: url) }
     }
 }
+

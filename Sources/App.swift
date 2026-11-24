@@ -16,7 +16,7 @@ enum Main {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
     private var window: NSWindow?
     private var settings: NSWindow?
     private var timer: Timer?
@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func debugLaunch() {
         guard Bundle.main.bundleIdentifier?.hasSuffix(".dev") == true else { return }
         let d = UserDefaults.standard
+        if d.bool(forKey: "debugSettings") { showSettings() }
         let n = d.integer(forKey: "debugSelect")
         guard n > 0 else { return }
         Task { @MainActor in
@@ -53,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             if let dir = d.string(forKey: "debugExport") {
                 try? await Task.sleep(for: .seconds(1))
                 Store.shared.exportFolder = dir
-                Store.shared.export(selectionOnly: true)
+                Store.shared.export(selectionOnly: !d.bool(forKey: "debugAll"))
             }
         }
     }
@@ -94,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             w.contentViewController = NSHostingController(rootView: SettingsView())
             w.isReleasedWhenClosed = false
             w.backgroundColor = NSColor(Socle.C.bg)
+            w.setContentSize(w.contentViewController?.view.fittingSize ?? .zero)
             settings = w
         }
         if let w = settings, let main = window {
@@ -119,6 +121,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    /// Sous-menu « Fichiers récents », rempli à chaque ouverture (la colonne de gauche ne les montre que sans fichier ouvert).
+    private func recentItem() -> NSMenuItem {
+        let i = NSMenuItem(title: L("menu.recent"), action: nil, keyEquivalent: "")
+        let m = NSMenu(title: L("menu.recent")); m.delegate = self
+        i.submenu = m
+        return i
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu.title == L("menu.recent") else { return }
+        menu.removeAllItems()
+        for u in Store.shared.recents {
+            let i = NSMenuItem(title: u.lastPathComponent + " — " + u.deletingLastPathComponent().lastPathComponent, action: #selector(openRecent(_:)), keyEquivalent: "")
+            i.target = self; i.representedObject = u
+            menu.addItem(i)
+        }
+        if menu.items.isEmpty { menu.addItem(NSMenuItem(title: L("side.none"), action: nil, keyEquivalent: "")) }
+    }
+
+    @objc func openRecent(_ sender: NSMenuItem) { if let u = sender.representedObject as? URL { Store.shared.open(u) } }
+
     // MARK: Menus (pas de couleur dans le nom de l'appli à l'intérieur d'un menu)
 
     private func buildMenu() {
@@ -143,6 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         ])
         submenu(L("menu.file"), [
             item(L("menu.open"), #selector(openFile), "o"),
+            recentItem(),
             item(L("menu.close"), #selector(closeFile), "w", [.command, .shift]), .separator(),
             item(L("menu.exportSel"), #selector(exportSelection), "e"),
             item(L("menu.exportAll"), #selector(exportAll), "e", [.command, .shift]), .separator(),

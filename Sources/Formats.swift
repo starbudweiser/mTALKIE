@@ -178,7 +178,17 @@ final class SoundBank: @unchecked Sendable {
     }
 
     /// Jeu reconnu d'après les fichiers voisins.
-    var gameName: String? {
+    var gameName: String? { Self.game(for: url)?.name }
+
+    /// Nom complet et nom court (liste des récents) du jeu d'après les fichiers voisins.
+    static func game(for url: URL) -> (name: String, short: String)? {
+        let shorts = ["Indiana Jones and the Fate of Atlantis": "Indy 4", "Day of the Tentacle": "DOTT", "Sam & Max Hit the Road": "Sam & Max",
+                      "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom"]
+        guard let n = gameFullName(url) else { return nil }
+        return (n, shorts[n] ?? n)
+    }
+
+    private static func gameFullName(_ url: URL) -> String? {
         let dir = url.deletingLastPathComponent()
         let names = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).map { $0.uppercased() })
         let known: [(String, String)] = [("ATLANTIS.000", "Indiana Jones and the Fate of Atlantis"), ("TENTACLE.000", "Day of the Tentacle"),
