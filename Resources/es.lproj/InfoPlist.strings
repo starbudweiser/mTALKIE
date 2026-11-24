@@ -1,0 +1,3 @@
+"NSDocumentsFolderUsageDescription" = "mTALKIE lee los archivos de voces que abre y escribe las réplicas exportadas en la carpeta elegida.";
+"NSRemovableVolumesUsageDescription" = "mTALKIE lee los archivos de voces de sus discos externos.";
+"NSNetworkVolumesUsageDescription" = "mTALKIE lee los archivos de voces de sus recursos compartidos en red.";

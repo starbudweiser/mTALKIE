@@ -1,0 +1,3 @@
+"NSDocumentsFolderUsageDescription" = "mTALKIE legge i file di voci che apri e scrive le battute esportate nella cartella scelta.";
+"NSRemovableVolumesUsageDescription" = "mTALKIE legge i file di voci dai tuoi dischi esterni.";
+"NSNetworkVolumesUsageDescription" = "mTALKIE legge i file di voci dalle tue condivisioni di rete.";

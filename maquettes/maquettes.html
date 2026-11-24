@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>mTALKIE — Maquettes (comparaison des designs)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--rr:20}
+body{font:13px/1.4 -apple-system,"SF Pro Text",system-ui,sans-serif;background:#0b0b0d;color:#eee;-webkit-font-smoothing:antialiased}
+.top{padding:18px 28px 6px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.top h1{font-size:20px;font-weight:700}.top .sub{color:#999}
+.tabs{display:flex;gap:6px;padding:10px 28px;flex-wrap:wrap}
+.tabs button{background:#222;color:#eee;border:0;padding:8px 16px;border-radius:999px;font:inherit;font-weight:500;cursor:pointer}
+.tabs button.on{background:#22c55e;color:#062b14}
+.tools{display:none;align-items:center;gap:14px;padding:4px 28px 12px;color:#aaa;flex-wrap:wrap}
+.tools.on{display:flex}
+.tools input[type=range]{width:220px;accent-color:#22c55e}
+.tools .seg{display:inline-flex;background:#222;border-radius:999px;padding:3px}
+.tools .seg button{border:0;background:none;color:#eee;font:inherit;padding:4px 14px;border-radius:999px;cursor:pointer}
+.tools .seg button.on{background:#444}
+.tools output{color:#fff;font-weight:600;min-width:34px}
+.stage{padding:6px 28px 40px;overflow-x:auto}
+.legend{color:#999;padding:0 28px 10px;max-width:1120px}
+
+/* ---------- fenêtre commune ---------- */
+.win{width:1120px;height:720px;display:grid;grid-template-columns:290px 1fr;grid-template-rows:auto 1fr auto;overflow:hidden;position:relative;
+ background:var(--bg);color:var(--t);border-radius:var(--rw);box-shadow:var(--sh);font-size:13px}
+.bar{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:var(--bd)}
+.lights{display:flex;gap:7px}.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.brand{font-weight:700;font-size:15px;margin-left:8px}.brand b{color:var(--m)}
+.right{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--t2);font-size:12px}
+.btn{background:var(--ctl);color:var(--t);border:0;padding:6px 12px;border-radius:var(--rc);font:inherit;font-weight:500;white-space:nowrap}
+.btn.pri{background:var(--acc);color:var(--onacc)}
+.side{padding:14px;display:flex;flex-direction:column;gap:14px;overflow:hidden;border-right:var(--bd)}
+.main{padding:14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.h{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:6px}
+.box{background:var(--card);border:var(--bd);border-radius:var(--rb);padding:12px;box-shadow:var(--shc)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;gap:8px}
+.row span:first-child{color:var(--t2)}
+.drop{border:2px dashed color-mix(in srgb,var(--t2) 45%,transparent);border-radius:var(--rb);padding:16px 12px;text-align:center;color:var(--t2);font-size:12px}
+.drop big{display:block;font-size:22px;margin-bottom:4px;color:var(--acc)}
+.file{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.fico{width:40px;height:40px;border-radius:var(--rc);display:grid;place-items:center;font-weight:700;font-size:11px;background:var(--acc);color:var(--onacc)}
+.fname{font-weight:650;font-size:14px}.sub{color:var(--t2);font-size:12px;margin-top:1px}
+.tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:var(--rch);background:var(--ctl);color:var(--t2);white-space:nowrap}
+.tag.ok{background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok)}
+.tag.warn{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.recent{display:flex;flex-direction:column;gap:4px}
+.recent div{display:flex;justify-content:space-between;padding:5px 8px;border-radius:var(--rc);font-size:12px}
+.recent div:hover,.recent div.on{background:var(--ctl)}
+.recent span{color:var(--t2)}
+.toolbar{display:flex;gap:8px;align-items:center}
+.search{flex:1;background:var(--ctl);border-radius:var(--rc);padding:8px 12px;color:var(--t2)}
+.table{background:var(--card);border:var(--bd);border-radius:var(--rb);overflow:hidden;box-shadow:var(--shc);flex:1;display:flex;flex-direction:column}
+.tr{display:grid;grid-template-columns:30px 34px 64px 1fr 82px 92px 96px;gap:10px;align-items:center;padding:7px 12px;border-bottom:var(--bd);font-variant-numeric:tabular-nums}
+.tr:last-child{border-bottom:0}
+.th{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.03em;background:color-mix(in srgb,var(--ctl) 45%,transparent)}
+.tr.sel{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.tr.play{background:color-mix(in srgb,var(--acc) 26%,transparent)}
+.cb{width:15px;height:15px;border-radius:calc(var(--rc)*.6);border:1.5px solid var(--t2);display:grid;place-items:center;font-size:10px}
+.tr.sel .cb,.tr.play .cb{background:var(--acc);border-color:var(--acc);color:var(--onacc)}
+.pl{width:24px;height:24px;border-radius:50%;background:var(--ctl);display:grid;place-items:center;font-size:9px}
+.tr.play .pl{background:var(--acc);color:var(--onacc)}
+.wave{height:22px;display:flex;align-items:center;gap:1.5px}
+.wave i{display:block;width:2px;border-radius:1px;background:color-mix(in srgb,var(--t) 40%,transparent)}
+.tr.play .wave i{background:var(--acc)}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--t2)}
+.r{text-align:right}
+.player{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:var(--bd);background:color-mix(in srgb,var(--card) 70%,transparent)}
+.bigplay{width:34px;height:34px;border-radius:50%;background:var(--acc);color:var(--onacc);display:grid;place-items:center;font-size:12px;flex:none}
+.prog{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.prog .wave{height:30px;overflow:hidden}
+.prog .wave i{background:color-mix(in srgb,var(--t) 30%,transparent)}
+.prog .wave i.d{background:var(--acc)}
+.exp{display:flex;flex:none;white-space:nowrap;gap:8px;align-items:center}
+.seg2{display:inline-flex;background:var(--ctl);border-radius:var(--rc);padding:2px}
+.seg2 span{padding:4px 10px;border-radius:calc(var(--rc)*.8);font-size:12px;font-weight:500}
+.seg2 span.on{background:var(--acc);color:var(--onacc)}
+.m{color:var(--m)}
+
+/* ---------- 1. Flat Round (rayon réglable) ---------- */
+[data-d=round]{--rw:calc(var(--rr)*1px + 6px);--rb:calc(var(--rr)*1px);--rc:calc(var(--rr)*.6px);--rch:calc(var(--rr)*1px);--m:#22c55e;--ok:#2fb36a;--warn:#e08a00;
+ --sh:0 24px 60px rgba(0,0,0,.35);--shc:none;--bd:none}
+[data-d=round][data-th=sombre]{--bg:#131316;--card:#232327;--ctl:#2c2c31;--t:#f5f5f7;--t2:#98989f;--acc:#22c55e;--onacc:#062b14;--ok:#30d158;--warn:#ff9f0a}
+[data-d=round][data-th=clair]{--bg:#f1f1f5;--card:#fff;--ctl:#e8e8ef;--t:#1c1c22;--t2:#6b6b78;--acc:#16a34a;--onacc:#fff;--sh:0 24px 60px rgba(0,0,0,.18);--shc:0 1px 0 rgba(0,0,0,.04)}
+[data-d=round] .side,[data-d=round] .bar,[data-d=round] .player{border:0}
+[data-d=round] .tr{border-bottom:1px solid color-mix(in srgb,var(--t2) 12%,transparent)}
+[data-d=round] .fico{background:#ff7a59;color:#fff}
+/* ---------- 2. Socle standard ---------- */
+[data-d=socle]{--rw:8px;--rb:6px;--rc:4px;--rch:4px;--bg:#131316;--card:#1c1c1f;--ctl:#2c2c31;--t:#f5f5f7;--t2:#98989f;--acc:#0a84ff;--onacc:#fff;--m:#22c55e;--ok:#30d158;--warn:#ff9f0a;
+ --sh:0 20px 50px rgba(0,0,0,.5);--shc:none;--bd:1px solid #303035;font-size:12.5px}
+[data-d=socle] .tr{padding:5px 10px}
+[data-d=socle] .box{padding:10px}
+[data-d=socle] .fico{background:#333;color:#38bdf8}
+/* ---------- 3. Flat Mat ---------- */
+[data-d=mat]{--rw:12px;--rb:12px;--rc:8px;--rch:999px;--bg:#f4f1ec;--card:#fff;--ctl:#ebe6de;--t:#26231e;--t2:#7b756a;--acc:#26231e;--onacc:#f4f1ec;--m:#3f8f5a;--ok:#3f8f5a;--warn:#b7791f;
+ --sh:0 18px 50px rgba(60,40,10,.18);--shc:none;--bd:1px solid #e3ddd2}
+[data-d=mat][data-th=sombre]{--bg:#131316;--card:#232327;--ctl:#2c2c31;--t:#f5f5f7;--t2:#98989f;--acc:#0a84ff;--onacc:#fff;--m:#4ade80;--ok:#30d158;--warn:#ff9f0a;--sh:0 18px 50px rgba(0,0,0,.5);--bd:1px solid #303035}
+[data-d=mat] .fico{background:#d9622b;color:#fff}
+/* ---------- 4. Verre (Apple Stephan) ---------- */
+[data-d=verre]{--rw:22px;--rb:18px;--rc:12px;--rch:999px;--bg:linear-gradient(135deg,#13324a,#1c4a3a 55%,#2a2350);--card:rgba(255,255,255,.10);--ctl:rgba(255,255,255,.14);--t:#f5f5f7;--t2:rgba(235,235,245,.62);--acc:#30d158;--onacc:#05240f;--m:#5fe08a;--ok:#5fe08a;--warn:#ffc04d;
+ --sh:0 30px 70px rgba(0,0,0,.5);--shc:inset 0 1px 0 rgba(255,255,255,.18);--bd:1px solid rgba(255,255,255,.14)}
+[data-d=verre] .box,[data-d=verre] .table,[data-d=verre] .player{backdrop-filter:blur(24px) saturate(1.4)}
+[data-d=verre] .side{background:rgba(255,255,255,.05)}
+[data-d=verre] .fico{background:linear-gradient(135deg,#ffffff55,#ffffff18);border:1px solid rgba(255,255,255,.25);color:#fff}
+</style></head><body>
+<div class="top"><h1><span style="color:#22c55e">m</span>TALKIE — Maquettes</h1><span class="sub">Nom provisoire · même écran dans les 4 designs · écran principal : un MONSTER.SOU ouvert, liste des répliques, écoute et export</span></div>
+<nav class="tabs" id="tabs">
+ <button data-d="socle" class="on">Socle standard</button><button data-d="verre">Apple Stephan (verre)</button><button data-d="mat">Flat Mat</button><button data-d="round">Flat Round</button>
+</nav>
+<div class="tools" id="tools">
+ <label class="rad">Arrondis des objets</label><input class="rad" type="range" id="rr" min="0" max="32" value="20"><output class="rad" id="rrv">20</output>
+ <span class="seg" id="seg"><button data-th="sombre" class="on">Sombre</button><button data-th="clair">Clair</button></span>
+ <span class="seg rad" id="presets"><button data-v="0">Carré</button><button data-v="10">Doux</button><button data-v="20" class="on">Rond</button><button data-v="32">Très rond</button></span>
+</div>
+<div class="legend" id="legend"></div>
+<div class="stage"><div class="win" id="win" data-d="socle" data-th="sombre">
+ <div class="bar"><div class="lights"><i></i><i></i><i></i></div><div class="brand"><b>m</b>TALKIE</div>
+  <div class="right"><span>Day of the Tentacle · version CD (talkie)</span><span class="btn">Ouvrir…</span><span class="btn">⚙</span></div></div>
+ <div class="side">
+  <div><div class="h">Fichier ouvert</div><div class="box">
+   <div class="file"><div class="fico">.SOU</div><div><div class="fname">MONSTER.SOU</div><div class="sub">DOTT CD · /Jeux/LucasArts/DOTT</div></div></div>
+   <div class="row"><span>Format</span><b>SOU · VOC 8 bits</b></div>
+   <div class="row"><span>Répliques</span><b>4 213</b></div>
+   <div class="row"><span>Durée totale</span><b>3 h 07 min</b></div>
+   <div class="row"><span>Fréquence</span><b>22 222 Hz mono</b></div>
+   <div class="row"><span>Taille</span><b>238 Mo</b></div>
+   <div class="row"><span>Décodage</span><span class="tag ok">✓ 4 213 / 4 213</span></div></div></div>
+  <div class="drop"><big>⇣</big>Glisser un fichier .SOU, .SO3, .SOG ou .SOF<br>ou un dossier de jeu</div>
+  <div><div class="h">Récents</div><div class="recent">
+   <div class="on">MONSTER.SOU <span>DOTT</span></div>
+   <div>MONSTER.SOU <span>DOTT</span></div>
+   <div>MONSTER.SOG <span>Sam & Max</span></div>
+   <div>MONSTER.SO3 <span>Indy 4</span></div></div></div>
+ </div>
+ <div class="main">
+  <div class="toolbar"><div class="search">⌕  Filtrer (n°, durée mini…)</div><span class="btn">Tout sélectionner</span><span class="btn">Tri : ordre du fichier ▾</span></div>
+  <div class="table" id="table">
+   <div class="tr th"><span></span><span></span><span>N°</span><span>Forme d'onde</span><span class="r">Durée</span><span class="r">Fréquence</span><span class="r">Décalage</span></div>
+  </div>
+ </div>
+ <div class="player">
+  <div class="bigplay">❚❚</div>
+  <div class="prog"><div class="row"><b>Réplique 0003</b><span class="mono">0:01,4 / 0:03,2</span></div><div class="wave" id="pw"></div></div>
+  <div class="exp"><span class="sub">12 sélectionnées</span><span class="seg2"><span class="on">WAV</span><span>AIFF</span><span>FLAC</span></span><span class="btn">📁 ~/Musique/DOTT</span><span class="btn">Exporter la sélection</span><span class="btn pri">Tout exporter</span></div>
+ </div>
+</div></div>
+<script>
+const R=[[1,'0:02,1',22222,'0x00001A',1],[2,'0:04,8',22222,'0x00B3F2',1],[3,'0:03,2',22222,'0x01D6C0',2],[4,'0:01,3',22222,'0x02A1E4',1],[5,'0:06,7',22222,'0x02F85A',0],
+[6,'0:00,9',11111,'0x046C12',0],[7,'0:02,5',22222,'0x04A0E8',1],[8,'0:05,2',22222,'0x0552AC',0],[9,'0:01,7',22222,'0x066F30',1],[10,'0:03,9',22222,'0x0712D6',0],
+[11,'0:02,2',22222,'0x07F9A2',0],[12,'0:07,4',22222,'0x08A3B0',0],[13,'0:01,1',22222,'0x0A2E44',0],[14,'0:04,0',22222,'0x0A6C58',0],[15,'0:02,8',22222,'0x0B5C1E',0],[16,'0:03,3',22222,'0x0C02F4',0]];
+let s=7;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280};
+const wave=(n,h)=>Array.from({length:n},(_,i)=>`<i style="height:${Math.max(2,Math.round((0.25+0.75*Math.abs(Math.sin(i/3.1)))*rnd()*h))}px"></i>`).join('');
+const tb=document.getElementById('table');
+R.forEach(([n,d,f,o,st])=>{const c=st==2?'tr play':st==1?'tr sel':'tr';tb.insertAdjacentHTML('beforeend',
+`<div class="${c}"><span class="cb">${st?'✓':''}</span><span class="pl">${st==2?'❚❚':'▶'}</span><span class="mono">${String(n).padStart(4,'0')}</span><div class="wave">${wave(70,22)}</div><span class="r">${d}</span><span class="r mono">${f.toLocaleString('fr-FR')} Hz</span><span class="r mono">${o}</span></div>`)});
+document.getElementById('pw').innerHTML=wave(120,30).replace(/<i /g,(m,i)=>m);
+document.querySelectorAll('#pw i').forEach((e,i)=>{if(i<52)e.classList.add('d')});
+const win=document.getElementById('win'),rr=document.getElementById('rr'),rrv=document.getElementById('rrv'),tools=document.getElementById('tools'),leg=document.getElementById('legend');
+const L={round:'Flat Round : mat, arrondi, coloré, clair/sombre. Curseur pour régler les arrondis de tous les objets (fenêtre, cartes, boutons, cases).',
+socle:'Socle standard : sombre, plat, dense, angles droits, un seul accent bleu. Le plus proche des utilitaires techniques du toolkit.',
+mat:'Flat Mat : fond crème ou charbon, aplats sobres, bordures fines, accent encre (style SOCiALS). Clair / sombre au choix.',
+verre:'Design Apple Stephan : cartes en verre translucide sur fond dégradé, flou et reflets.'};
+function set(d){win.dataset.d=d;document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.d===d));tools.classList.toggle('on',d==='round'||d==='mat');document.querySelectorAll('.rad').forEach(e=>e.style.display=d==='round'?'':'none');leg.textContent=L[d]}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>set(b.dataset.d));
+function rad(v){win.style.setProperty('--rr',v);rr.value=v;rrv.textContent=v;document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',+b.dataset.v===+v))}
+rr.oninput=()=>rad(rr.value);
+document.querySelectorAll('#presets button').forEach(b=>b.onclick=()=>rad(b.dataset.v));
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{win.dataset.th=b.dataset.th;document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b))});
+set('socle');
+</script></body></html>

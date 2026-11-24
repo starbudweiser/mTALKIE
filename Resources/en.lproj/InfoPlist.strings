@@ -1,0 +1,3 @@
+"NSDocumentsFolderUsageDescription" = "mTALKIE reads the voice files you open and writes the exported lines to the folder you choose.";
+"NSRemovableVolumesUsageDescription" = "mTALKIE reads voice files from your external disks.";
+"NSNetworkVolumesUsageDescription" = "mTALKIE reads voice files from your network shares.";

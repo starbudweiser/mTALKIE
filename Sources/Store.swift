@@ -1,0 +1,243 @@
+// mTALKIE — état de l'appli : fichier ouvert, sélection, récents, export.
+import AppKit
+import SwiftUI
+import UniformTypeIdentifiers
+
+@MainActor
+final class Store: ObservableObject {
+    static let shared = Store()
+
+    @Published private(set) var bank: SoundBank?
+    @Published private(set) var lines: [Line] = []
+    @Published var selection = Set<Line.ID>()
+    @Published var filter = ""
+    @Published private(set) var error: String?
+    @Published private(set) var loading = false
+    @Published private(set) var peaks: [Int: [Float]] = [:]
+    @Published var showSettings = false
+
+    // Export
+    @Published private(set) var exporting = false
+    @Published private(set) var exportDone = 0
+    @Published private(set) var exportTotal = 0
+    @Published private(set) var exportReport: ExportReport?
+    private var exportTask: Task<Void, Never>?
+    private var started = Date()
+
+    @AppStorage("format") var formatRaw = ExportFormat.wav.rawValue
+    @AppStorage("pattern") var pattern = "{file}_{n}"
+    @AppStorage("subfolder") var subfolder = true
+    @AppStorage("exportFolder") var exportFolder = ""
+    @AppStorage("recents") private var recentsRaw = ""
+
+    let player = Player()
+    private var completeTask: Task<Void, Never>?
+
+    var format: ExportFormat {
+        get { ExportFormat(rawValue: formatRaw) ?? .wav }
+        set { formatRaw = newValue.rawValue }
+    }
+
+    var recents: [URL] { recentsRaw.split(separator: "\n").map { URL(fileURLWithPath: String($0)) } }
+
+    var visibleLines: [Line] {
+        let f = filter.trimmingCharacters(in: .whitespaces)
+        guard !f.isEmpty else { return lines }
+        if f.hasPrefix(">"), let s = Double(f.dropFirst().trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")) {
+            return lines.filter { $0.duration > s }
+        }
+        let low = f.lowercased()
+        return lines.filter { String(format: "%04d", $0.id).contains(low) || String(format: "%08x", $0.offset).contains(low) }
+    }
+
+    var destination: URL {
+        if !exportFolder.isEmpty { return URL(fileURLWithPath: exportFolder) }
+        return FileManager.default.urls(for: .musicDirectory, in: .userDomainMask)[0].appendingPathComponent("mTALKIE")
+    }
+
+    // MARK: Ouverture
+
+    /// Fichier de voix, ou dossier de jeu où MONSTER.* (ou tout .SOU/.SO3/.SOG/.SOF) est cherché.
+    func open(_ url: URL) {
+        let target: URL
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
+            guard let found = Self.findBank(in: url) else { error = L("err.nofolder"); return }
+            target = found
+        } else { target = url }
+        player.stop()
+        completeTask?.cancel()
+        loading = true; error = nil
+        Task.detached(priority: .userInitiated) {
+            do {
+                let b = try SoundBank(url: target)
+                await MainActor.run { self.loaded(b) }
+            } catch {
+                await MainActor.run { self.loading = false; self.error = "\(target.lastPathComponent) : \(error.localizedDescription)" }
+            }
+        }
+    }
+
+    private func loaded(_ b: SoundBank) {
+        bank = b; lines = b.lines; selection = []; peaks = [:]; loading = false
+        addRecent(b.url)
+        if b.codec != .voc { completeDurations(b) }
+    }
+
+    func close() { player.stop(); bank = nil; lines = []; selection = []; peaks = [:] }
+
+    static let extensions = ["sou", "so3", "sog", "sof"]
+
+    static func findBank(in dir: URL) -> URL? {
+        guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return nil }
+        var candidates: [URL] = []
+        for case let u as URL in e {
+            if e.level > 3 { e.skipDescendants(); continue }
+            if extensions.contains(u.pathExtension.lowercased()) { candidates.append(u) }
+        }
+        return candidates.first { $0.deletingPathExtension().lastPathComponent.uppercased() == "MONSTER" } ?? candidates.first
+    }
+
+    private func addRecent(_ url: URL) {
+        var r = recents.map(\.path).filter { $0 != url.path }
+        r.insert(url.path, at: 0)
+        recentsRaw = r.prefix(8).joined(separator: "\n")
+    }
+
+    func chooseFile() {
+        let p = NSOpenPanel()
+        p.canChooseDirectories = true; p.allowsMultipleSelection = false
+        p.message = L("open.message")
+        if p.runModal() == .OK, let u = p.url { open(u) }
+    }
+
+    /// Formats compressés : durée et fréquence connues seulement après décodage, fait en arrière-plan.
+    private func completeDurations(_ b: SoundBank) {
+        let pending = b.lines
+        completeTask = Task.detached(priority: .utility) {
+            for line in pending {
+                if Task.isCancelled { return }
+                guard let pcm = try? b.decode(line) else { continue }
+                await MainActor.run {
+                    guard self.bank === b else { return }
+                    b.update(line.id, rate: pcm.rate, duration: pcm.duration)
+                    if let i = self.lines.firstIndex(where: { $0.id == line.id }) {
+                        self.lines[i].rate = pcm.rate; self.lines[i].duration = pcm.duration
+                    }
+                    self.peaks[line.id] = Peaks.compute(pcm, count: 64)
+                }
+            }
+        }
+    }
+
+    // MARK: Écoute
+
+    func play(_ id: Line.ID) {
+        guard let b = bank, let line = lines.first(where: { $0.id == id }) else { return }
+        if player.playing == id { player.toggle(); return }
+        do { player.play(line, pcm: try b.decode(line)) } catch { self.error = error.localizedDescription }
+    }
+
+    func playSelection() {
+        if let id = selection.sorted().first { play(id) } else if player.playing != nil { player.toggle() }
+    }
+
+    /// Forme d'onde d'une ligne, calculée à la demande (VOC : immédiat ; compressé : rempli par le décodage de fond).
+    func requestPeaks(_ id: Line.ID) {
+        guard peaks[id] == nil, let b = bank, b.codec == .voc, let line = lines.first(where: { $0.id == id }) else { return }
+        if let pcm = try? b.decode(line) { peaks[id] = Peaks.compute(pcm, count: 64) } else { peaks[id] = [] }
+    }
+
+    // MARK: Export
+
+    struct ExportReport { var ok: Int; var skipped: [(Line, String)]; var folder: URL; var cancelled: Bool }
+
+    func chooseFolder() {
+        let p = NSOpenPanel()
+        p.canChooseDirectories = true; p.canChooseFiles = false; p.canCreateDirectories = true
+        p.directoryURL = destination
+        if p.runModal() == .OK, let u = p.url { exportFolder = u.path }
+    }
+
+    var remaining: String {
+        guard exportDone > 0 else { return "" }
+        let per = Date().timeIntervalSince(started) / Double(exportDone)
+        return L("export.remaining", Int((per * Double(exportTotal - exportDone)).rounded(.up)))
+    }
+
+    func export(selectionOnly: Bool) {
+        guard let b = bank, !exporting else { return }
+        let todo = selectionOnly ? lines.filter { selection.contains($0.id) } : lines
+        guard !todo.isEmpty else { return }
+        var folder = destination
+        if subfolder { folder.appendPathComponent(Self.folderName(b)) }
+        let fmt = format, pat = pattern
+        exporting = true; exportDone = 0; exportTotal = todo.count; exportReport = nil; started = Date()
+        BusyFlag.set(true)
+        exportTask = Task.detached(priority: .userInitiated) {
+            var skipped: [(Line, String)] = []
+            var ok = 0
+            do { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+            catch {
+                await MainActor.run { self.finish(ExportReport(ok: 0, skipped: [(todo[0], error.localizedDescription)], folder: folder, cancelled: false)) }
+                return
+            }
+            await withTaskGroup(of: (Line, String?).self) { group in
+                var it = todo.makeIterator()
+                func add() -> Bool {
+                    guard let line = it.next() else { return false }
+                    group.addTask {
+                        do {
+                            let pcm = try b.decode(line)
+                            try Encoder.write(pcm, to: folder.appendingPathComponent(Encoder.name(pattern: pat, source: b.url, line: line, format: fmt)), format: fmt)
+                            return (line, nil)
+                        } catch { return (line, error.localizedDescription) }
+                    }
+                    return true
+                }
+                for _ in 0 ..< 4 { _ = add() }
+                while let (line, err) = await group.next() {
+                    if let err { skipped.append((line, err)) } else { ok += 1 }
+                    let done = ok + skipped.count
+                    if done % 25 == 0 || done == todo.count { await MainActor.run { self.exportDone = done } }
+                    if Task.isCancelled { group.cancelAll(); break }
+                    _ = add()
+                }
+            }
+            let report = ExportReport(ok: ok, skipped: skipped.sorted { $0.0.id < $1.0.id }, folder: folder, cancelled: Task.isCancelled)
+            await MainActor.run { self.finish(report) }
+        }
+    }
+
+    private func finish(_ r: ExportReport) {
+        exporting = false; exportReport = r; exportTask = nil
+        BusyFlag.set(false)
+    }
+
+    func cancelExport() { exportTask?.cancel() }
+    func dismissReport() { exportReport = nil }
+
+    static func folderName(_ b: SoundBank) -> String {
+        if let g = b.gameName { return g.replacingOccurrences(of: ":", with: " -") }
+        return b.url.deletingLastPathComponent().lastPathComponent
+    }
+
+    /// Fichier temporaire pour glisser une ligne vers le Finder.
+    func dragFile(_ id: Line.ID) -> URL? {
+        guard let b = bank, let line = lines.first(where: { $0.id == id }), let pcm = try? b.decode(line) else { return nil }
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("mTALKIE-drag", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(Encoder.name(pattern: pattern, source: b.url, line: line, format: .wav))
+        do { try WavWriter.data(pcm).write(to: url); return url } catch { return nil }
+    }
+
+    func clearError() { error = nil }
+}
+
+/// Fichier témoin d'un export en cours : ni la mise à jour automatique ni le script de build n'interrompent un export.
+enum BusyFlag {
+    static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".mtalkie-busy")
+    static func set(_ on: Bool) {
+        if on { FileManager.default.createFile(atPath: url.path, contents: nil) } else { try? FileManager.default.removeItem(at: url) }
+    }
+}

@@ -1,0 +1,6 @@
+*.app
+dist/
+build/
+.DS_Store
+Icon?
+PASSATION_*.md
