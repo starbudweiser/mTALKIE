@@ -321,6 +321,7 @@ struct LinesTable: View {
         } primaryAction: { ids in
             if let id = ids.sorted().first { store.play(id) }
         }
+        .id(store.sortGeneration)
         .onKeyPress(.space) { store.playSelection(); return .handled }
         .scrollContentBackground(.hidden)
         .background(Socle.C.surface)

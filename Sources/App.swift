@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         let d = UserDefaults.standard
         if d.bool(forKey: "debugSettings") { showSettings() }
         if let out = d.string(forKey: "debugScroll") { benchScroll(to: out) }
+        if let out = d.string(forKey: "debugSort") { benchSort(to: out) }
         let n = d.integer(forKey: "debugSelect")
         guard n > 0 else { return }
         Task { @MainActor in
@@ -85,6 +86,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             let avg = gaps.reduce(0, +) / Double(gaps.count), mx = gaps.max() ?? 0
             let slow = gaps.filter { $0 > 50 }.count
             try? String(format: "moyenne %.1f ms, max %.0f ms, %d pas au-delà de 50 ms", avg, mx, slow).write(toFile: out, atomically: true, encoding: .utf8)
+        }
+    }
+
+    /// Essai de tri (version de développement) : clics successifs sur Durée (croissant, décroissant), Nom/Texte puis N° ;
+    /// écrit le temps de chaque tri, affichage compris.
+    private func benchSort(to out: String) {
+        Task { @MainActor in
+            while Store.shared.bank == nil { try? await Task.sleep(for: .milliseconds(200)) }
+            try? await Task.sleep(for: .seconds(3))
+            let orders: [(String, KeyPathComparator<Line>)] = [
+                ("durée ↑", KeyPathComparator(\Line.duration)), ("durée ↓", KeyPathComparator(\Line.duration, order: .reverse)),
+                ("texte ↑", KeyPathComparator(\Line.text)), ("décalage ↑", KeyPathComparator(\Line.offset)),
+                ("durée ↑", KeyPathComparator(\Line.duration)), ("n° ↑", KeyPathComparator(\Line.id)),
+            ]
+            var report: [String] = []
+            for (name, o) in orders {
+                let t0 = CACurrentMediaTime()
+                Store.shared.sortOrder = [o]
+                self.window?.contentView?.layoutSubtreeIfNeeded()
+                self.window?.displayIfNeeded()
+                try? await Task.sleep(for: .milliseconds(1))
+                report.append(String(format: "%@ %.0f ms (tri %.0f ms)", name, (CACurrentMediaTime() - t0) * 1000, Store.shared.lastSortMs))
+                try? await Task.sleep(for: .milliseconds(400))
+            }
+            try? report.joined(separator: ", ").write(toFile: out, atomically: true, encoding: .utf8)
         }
     }
 

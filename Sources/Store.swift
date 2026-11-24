@@ -51,13 +51,39 @@ final class Store: ObservableObject {
     var recents: [URL] { recentsRaw.split(separator: "\n").map { URL(fileURLWithPath: String($0)) } }
 
     /// Tri choisi en cliquant sur l'en-tête d'une colonne (N°, Durée, Décalage).
-    @Published var sortOrder = [KeyPathComparator(\Line.id)] { didSet { refreshRows() } }
+    @Published var sortOrder = [KeyPathComparator(\Line.id)] { didSet { sortGeneration &+= 1; refreshRows() } }
 
     var visibleLines: [Line] { rows }
 
     private func refreshRows() {
-        let list = filteredLines
-        rows = sortOrder.first == KeyPathComparator(\Line.id) ? list : list.sorted(using: sortOrder)
+        let t0 = CFAbsoluteTimeGetCurrent()
+        rows = Self.sorted(filteredLines, by: sortOrder.first)
+        lastSortMs = (CFAbsoluteTimeGetCurrent() - t0) * 1000
+    }
+    private(set) var lastSortMs = 0.0
+    /// Change à chaque nouveau tri : la liste est alors reconstruite d'un bloc au lieu de chercher le déplacement de chaque ligne.
+    @Published private(set) var sortGeneration = 0
+
+    /// Tri direct sur la colonne cliquée (le tri générique de Foundation, par chemins de clés, est des dizaines de fois plus lent).
+    /// À égalité, l'ordre du fichier départage : le tri reste stable d'un clic à l'autre.
+    static func sorted(_ list: [Line], by c: KeyPathComparator<Line>?) -> [Line] {
+        guard let c else { return list }
+        let asc = c.order == .forward
+        func by<T: Comparable>(_ f: (Line) -> T) -> [Line] {
+            list.sorted { a, b in
+                let x = f(a), y = f(b)
+                if x == y { return a.id < b.id }
+                return asc ? x < y : x > y
+            }
+        }
+        switch c.keyPath {
+        case \Line.id: return asc ? list.sorted { $0.id < $1.id } : list.sorted { $0.id > $1.id }
+        case \Line.duration: return by { $0.duration }
+        case \Line.offset: return by { $0.offset }
+        case \Line.name: return by { $0.name }
+        case \Line.text: return by { $0.text }
+        default: return list.sorted(using: c)
+        }
     }
 
     private var filteredLines: [Line] {
