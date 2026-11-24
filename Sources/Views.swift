@@ -244,7 +244,7 @@ struct LinesTable: View {
     @ObservedObject private var player = Store.shared.player
 
     var body: some View {
-        Table(of: Line.self, selection: $store.selection) {
+        Table(of: Line.self, selection: $store.selection, sortOrder: $store.sortOrder) {
             TableColumn("") { line in
                 let on = store.selection.contains(line.id)
                 Button { if on { store.selection.remove(line.id) } else { store.selection.insert(line.id) } } label: {
@@ -263,18 +263,18 @@ struct LinesTable: View {
                         .foregroundStyle(current ? Socle.C.accentText : Socle.C.text)
                 }.buttonStyle(.plain)
             }.width(20)
-            TableColumn(L("col.n")) { line in Text(String(format: "%04d", line.id)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted) }.width(48)
+            TableColumn(L("col.n"), value: \.id) { line in Text(String(format: "%04d", line.id)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted) }.width(48)
             TableColumn(L("col.wave")) { line in
                 WaveView(peaks: store.peaks[line.id] ?? [], highlight: player.playing == line.id)
                     .frame(height: 18)
                     .onAppear { store.requestPeaks(line.id) }
             }
-            TableColumn(L("col.duration")) { line in
+            TableColumn(L("col.duration"), value: \.duration) { line in
                 Text(line.rate > 0 ? Fmt.short(line.duration) : "…").monospacedDigit()
                     .foregroundStyle(line.supported ? Socle.C.text : Socle.C.warning)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }.width(64)
-            TableColumn(L("col.offset")) { line in
+            TableColumn(L("col.offset"), value: \.offset) { line in
                 Text(String(format: "0x%06X", line.offset)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
                     .frame(maxWidth: .infinity, alignment: .trailing).textSelection(.enabled)
             }.width(86)

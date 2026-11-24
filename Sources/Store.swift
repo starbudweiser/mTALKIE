@@ -40,7 +40,15 @@ final class Store: ObservableObject {
 
     var recents: [URL] { recentsRaw.split(separator: "\n").map { URL(fileURLWithPath: String($0)) } }
 
+    /// Tri choisi en cliquant sur l'en-tête d'une colonne (N°, Durée, Décalage).
+    @Published var sortOrder = [KeyPathComparator(\Line.id)]
+
     var visibleLines: [Line] {
+        let list = filteredLines
+        return sortOrder.first == KeyPathComparator(\Line.id) ? list : list.sorted(using: sortOrder)
+    }
+
+    private var filteredLines: [Line] {
         let f = filter.trimmingCharacters(in: .whitespaces)
         guard !f.isEmpty else { return lines }
         if f.hasPrefix(">"), let s = Double(f.dropFirst().trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")) {
