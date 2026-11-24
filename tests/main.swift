@@ -229,6 +229,37 @@ if FileManager.default.fileExists(atPath: digURL.path) {
     } catch { check(false, "The Dig : \(error)") }
 }
 
+// MARK: 3 quinquies. Sierra SCI32 (Space Quest 6)
+let sq6URL = URL(fileURLWithPath: "/Volumes/SAMSUNG T7/JEUX/SCUMMVM/SpaceQ6/RESOURCE.AUD")
+if FileManager.default.fileExists(atPath: sq6URL.path) {
+    print("3 quinquies. Sierra : \(sq6URL.path)")
+    do {
+        var t0 = Date()
+        let b = try SoundBank(url: sq6URL)
+        print(String(format: "    ouverture : %.2f s, %d répliques, %.0f min, %@", Date().timeIntervalSince(t0), b.lines.count, b.totalDuration / 60, b.gameName ?? "?"))
+        check(b.lines.count > 1000 && b.gameName == "Space Quest 6" && b.lines[0].name == "0_6_17_0_1", "répliques lues d'après les cartes du jeu, jeu reconnu")
+        t0 = Date(); var bad = 0
+        for l in b.lines { if let p = try? b.decode(l) { if abs(p.duration - l.duration) > 0.01 { bad += 1 } } else { bad += 1 } }
+        print(String(format: "    décodage de toutes les répliques : %.2f s", Date().timeIntervalSince(t0)))
+        check(bad == 0, "\(b.lines.count - bad) répliques décodées (\(bad) en échec)")
+        // Comparaison avec le décodeur SOL de ffmpeg
+        let l = b.lines[0]
+        let sol = work.appendingPathComponent("c0.sol"), out = work.appendingPathComponent("c0.raw")
+        try b.data.subdata(in: b.data.startIndex + l.start ..< b.data.startIndex + l.start + l.length).write(to: sol)
+        if ffmpeg(sol, out, ["-f", "s16le"]), let ref = try? Data(contentsOf: out) {
+            let r = ref.withUnsafeBytes { Array($0.bindMemory(to: Int16.self)) }
+            let mine = try b.decode(l).samples.map { Int16(($0 * 32768).rounded()) }
+            check(r == mine, "DPCM 16 bits identique au décodeur de ffmpeg (\(mine.count) échantillons)")
+        }
+        t0 = Date()
+        let tx = Sierra.texts(dir: sq6URL.deletingLastPathComponent())
+        let n = b.lines.filter { tx[$0.name] != nil }.count
+        print(String(format: "    textes : %d répliques sur %d (%.2f s), langue %@", n, b.lines.count, Date().timeIntervalSince(t0), Sierra.detect(tx)))
+        check(tx["0_0_4_0_1"] == "Ne touche pas à ça! Tu ne sais pas où tu as traîné!", "texte des messages (STACpack)")
+        check(n * 10 > b.lines.count * 8, "plus de 80 % des répliques ont leur texte")
+    } catch { check(false, "Space Quest 6 : \(error)") }
+}
+
 // MARK: 4. Traductions
 print("4. Traductions")
 let keys = Set(Loc.fr.keys)

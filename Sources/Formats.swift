@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -61,12 +61,14 @@ final class SoundBank: @unchecked Sendable {
         case "sof": codec = .flac
         case "xwb": codec = .xwb
         case "bun": codec = .bun
+        case "aud": codec = .aud
         default: codec = .voc
         }
         switch codec {
         case .voc: try parseSou()
         case .xwb: try parseXwb()
         case .bun: lines = try BunArchive.parse(data)
+        case .aud: lines = try Sierra.parse(data, url: url)
         default: try parseCompressed()
         }
         guard !lines.isEmpty else { throw FormatError.empty }
@@ -198,6 +200,8 @@ final class SoundBank: @unchecked Sendable {
             return try Xact.decode(data, line: line, entry: xact[line.id - 1])
         case .bun:
             return try BunArchive.decode(data, line: line)
+        case .aud:
+            return try Sierra.decode(data, line: line)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -228,6 +232,7 @@ final class SoundBank: @unchecked Sendable {
         let names = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).map { $0.uppercased() })
         // Éditions spéciales : la banque de sons est dans « audio », le jeu (monkey2.pak) dans le dossier parent.
         let parent = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.deletingLastPathComponent().path)) ?? []).map { $0.uppercased() })
+        if url.pathExtension.lowercased() == "aud", let n = Sierra.gameName(dir: dir) { return n }
         if url.pathExtension.lowercased() == "xwb" {
             if parent.contains("MONKEY2.PAK") || names.contains("MONKEY2.PAK") { return "Monkey Island 2: Special Edition" }
             if parent.contains("MONKEY1.PAK") || names.contains("MONKEY1.PAK") { return "The Secret of Monkey Island: Special Edition" }

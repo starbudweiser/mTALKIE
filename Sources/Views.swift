@@ -107,7 +107,7 @@ struct FileCard: View {
             SectionTitle(L("side.file"))
             Text(bank.url.lastPathComponent).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.middle)
                 .help(bank.url.path)
-            KV(k: L("info.format"), v: bank.codec == .voc ? L("info.voc") : bank.codec == .xwb ? bank.xwbFormat : bank.codec == .bun ? "iMUSE BUN" : bank.codec.rawValue.uppercased())
+            KV(k: L("info.format"), v: bank.codec == .voc ? L("info.voc") : bank.codec == .xwb ? bank.xwbFormat : bank.codec == .bun ? "iMUSE BUN" : bank.codec == .aud ? "Sierra SOL" : bank.codec.rawValue.uppercased())
             KV(k: L("info.lines"), v: store.lines.count.formatted(.number.locale(Loc.locale)))
             KV(k: L("info.duration"), v: pending ? L("info.pending") : Fmt.long(store.lines.reduce(0) { $0 + $1.duration }))
             KV(k: L("info.rate"), v: rate)
@@ -127,7 +127,7 @@ struct FileCard: View {
                 } label: { Text(L("btn.textsLang")).socle(Socle.T.meta).foregroundStyle(Socle.C.accentText) }
                     .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
                     .frame(maxWidth: .infinity, alignment: .trailing)
-            } else if bank.codec != .xwb && bank.codec != .bun {
+            } else if [.voc, .mp3, .ogg, .flac].contains(bank.codec) {
                 Button(L("btn.texts")) { store.chooseTexts() }
                     .buttonStyle(.plain).socle(Socle.T.meta).foregroundStyle(Socle.C.accentText)
                     .frame(maxWidth: .infinity, alignment: .trailing)

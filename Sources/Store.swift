@@ -129,7 +129,7 @@ final class Store: ObservableObject {
         hasNames = b.lines.contains { !$0.name.isEmpty }
         addRecent(b.url)
         if b.lines.contains(where: { $0.rate == 0 }) { completeDurations(b) }
-        if b.codec == .xwb || b.codec == .bun { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
+        if b.codec == .xwb || b.codec == .bun || b.codec == .aud { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
         let chosen = textsChoice[b.url.path].map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
@@ -179,6 +179,11 @@ final class Store: ObservableObject {
                     url = info
                     sets = Xact.infoLanguages.map { ($0, Xact.texts(names: names, info: dict, language: $0)) }
                 }
+            } else if b.codec == .aud {
+                let dict = Sierra.texts(dir: b.url.deletingLastPathComponent())
+                var t: [Int: String] = [:]
+                for l in lines { if let x = dict[l.name] { t[l.offset] = x } }
+                if !t.isEmpty { url = b.url.deletingLastPathComponent().appendingPathComponent("RESOURCE.000"); sets = [(Sierra.detect(dict), t)] }
             } else if b.codec == .bun, let found = BunArchive.textSets(near: b.url) {
                 url = found.url
                 sets = found.sets.map { lang, dict in
@@ -229,7 +234,7 @@ final class Store: ObservableObject {
         loadTexts(u, for: b, report: true)
     }
 
-    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun"]
+    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud"]
 
     static func findBank(in dir: URL) -> URL? {
         guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return nil }
@@ -290,7 +295,7 @@ final class Store: ObservableObject {
 
     /// Forme d'onde d'une ligne, calculée à la demande (VOC : immédiat ; compressé : rempli par le décodage de fond).
     func requestPeaks(_ id: Line.ID) {
-        guard peaks[id] == nil, let b = bank, b.codec == .voc || b.codec == .xwb || b.codec == .bun, let line = lines.first(where: { $0.id == id }) else { return }
+        guard peaks[id] == nil, let b = bank, b.codec != .mp3 && b.codec != .ogg && b.codec != .flac, let line = lines.first(where: { $0.id == id }) else { return }
         if let pcm = try? b.decode(line) { peaks[id] = Peaks.compute(pcm, count: 64) } else { peaks[id] = [] }
     }
 
