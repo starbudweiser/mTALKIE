@@ -6,6 +6,24 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>mTALKIE</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sou</string>
+				<string>so3</string>
+				<string>sog</string>
+				<string>sof</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>SCUMM speech file</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>mTALKIE</string>
 	<key>CFBundleIconFile</key>
@@ -24,40 +42,22 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>SCUMM speech file</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSHandlerRank</key>
-			<string>Alternate</string>
-			<key>CFBundleTypeExtensions</key>
-			<array>
-				<string>sou</string>
-				<string>so3</string>
-				<string>sog</string>
-				<string>sof</string>
-			</array>
-		</dict>
-	</array>
+	<string>2</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
-	<key>NSHighResolutionCapable</key>
-	<true/>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>mTALKIE reads the voice files you open and writes the exported lines to the folder you choose.</string>
-	<key>NSRemovableVolumesUsageDescription</key>
-	<string>mTALKIE reads voice files from your external disks.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 	<key>NSNetworkVolumesUsageDescription</key>
 	<string>mTALKIE reads voice files from your network shares.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>mTALKIE reads voice files from your external disks.</string>
 </dict>
 </plist>
