@@ -92,7 +92,9 @@ enum Encoder {
 @MainActor
 final class Player: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published private(set) var playing: Int?        // numéro de la réplique en cours
-    @Published private(set) var position: Double = 0
+    /// Position de lecture, publiée à part : seul le compteur du bas se redessine 20 fois par seconde.
+    let clock = PlayerClock()
+    var position: Double { clock.position }
     @Published private(set) var duration: Double = 0
     @Published private(set) var peaks: [Float] = []
     private var player: AVAudioPlayer?
@@ -108,7 +110,7 @@ final class Player: NSObject, ObservableObject, AVAudioPlayerDelegate {
         playing = line.id
         p.play()
         timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.position = self?.player?.currentTime ?? 0 }
+            Task { @MainActor in self?.clock.position = self?.player?.currentTime ?? 0 }
         }
     }
 
@@ -123,22 +125,27 @@ final class Player: NSObject, ObservableObject, AVAudioPlayerDelegate {
     func seek(_ fraction: Double) {
         guard let p = player else { return }
         p.currentTime = max(0, min(1, fraction)) * p.duration
-        position = p.currentTime
+        clock.position = p.currentTime
     }
 
     func stop() {
         player?.stop(); player = nil
         timer?.invalidate(); timer = nil
-        playing = nil; position = 0
+        playing = nil; clock.position = 0
     }
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
             self.timer?.invalidate(); self.timer = nil
-            self.position = self.duration
+            self.clock.position = self.duration
             self.objectWillChange.send()
         }
     }
+}
+
+@MainActor
+final class PlayerClock: ObservableObject {
+    @Published var position: Double = 0
 }
 
 enum Peaks {

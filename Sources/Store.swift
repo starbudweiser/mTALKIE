@@ -8,12 +8,15 @@ final class Store: ObservableObject {
     static let shared = Store()
 
     @Published private(set) var bank: SoundBank?
-    @Published private(set) var lines: [Line] = []
+    @Published private(set) var lines: [Line] = [] { didSet { refreshRows() } }
+    /// Lignes affichées (filtrées puis triées), recalculées seulement quand les répliques, le filtre ou le tri changent.
+    @Published private(set) var rows: [Line] = []
     @Published var selection = Set<Line.ID>()
-    @Published var filter = ""
+    @Published var filter = "" { didSet { refreshRows() } }
     @Published private(set) var error: String?
     @Published private(set) var loading = false
-    @Published private(set) var peaks: [Int: [Float]] = [:]
+    /// Formes d'onde déjà calculées (hors publication : les remplir ne redessine pas la liste).
+    let peakCache = PeakCache()
     @Published private(set) var texts: ScriptTexts?          // textes des répliques (scripts du jeu)
     @Published private(set) var textsLoading = false
     @Published private(set) var hasNames = false              // éditions spéciales : répliques nommées
@@ -48,11 +51,13 @@ final class Store: ObservableObject {
     var recents: [URL] { recentsRaw.split(separator: "\n").map { URL(fileURLWithPath: String($0)) } }
 
     /// Tri choisi en cliquant sur l'en-tête d'une colonne (N°, Durée, Décalage).
-    @Published var sortOrder = [KeyPathComparator(\Line.id)]
+    @Published var sortOrder = [KeyPathComparator(\Line.id)] { didSet { refreshRows() } }
 
-    var visibleLines: [Line] {
+    var visibleLines: [Line] { rows }
+
+    private func refreshRows() {
         let list = filteredLines
-        return sortOrder.first == KeyPathComparator(\Line.id) ? list : list.sorted(using: sortOrder)
+        rows = sortOrder.first == KeyPathComparator(\Line.id) ? list : list.sorted(using: sortOrder)
     }
 
     private var filteredLines: [Line] {
@@ -125,7 +130,8 @@ final class Store: ObservableObject {
     }
 
     private func loaded(_ b: SoundBank) {
-        bank = b; lines = b.lines; selection = []; peaks = [:]; loading = false; texts = nil
+        peakCache.clear()
+        bank = b; lines = b.lines; selection = []; loading = false; texts = nil
         hasNames = b.lines.contains { !$0.name.isEmpty }
         addRecent(b.url)
         if b.lines.contains(where: { $0.rate == 0 }) { completeDurations(b) }
@@ -134,7 +140,7 @@ final class Store: ObservableObject {
         if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
 
-    func close() { player.stop(); bank = nil; lines = []; selection = []; peaks = [:]; texts = nil; hasNames = false }
+    func close() { player.stop(); bank = nil; lines = []; selection = []; peakCache.clear(); texts = nil; hasNames = false }
 
     // MARK: Textes
 
@@ -155,7 +161,9 @@ final class Store: ObservableObject {
                 switch result {
                 case .success(let t):
                     self.texts = t
-                    for i in self.lines.indices { self.lines[i].text = t.texts[self.lines[i].offset] ?? "" }
+                    var copy = self.lines
+                    for i in copy.indices { copy[i].text = t.texts[copy[i].offset] ?? "" }
+                    self.lines = copy
                 case .failure(let e):
                     if report { self.error = "\(url.lastPathComponent) : \(e.localizedDescription)" }
                 }
@@ -192,13 +200,14 @@ final class Store: ObservableObject {
                     return (lang, t)
                 }.filter { !$0.1.isEmpty }
             }
+            let found = url, all = sets
             await MainActor.run {
                 guard self.bank === b else { return }
                 self.textsLoading = false
-                guard let url, !sets.isEmpty else { return }
-                self.namedURL = url
-                self.namedSets = Dictionary(sets, uniquingKeysWith: { a, _ in a })
-                self.namedOrder = sets.map(\.0)
+                guard let found, !all.isEmpty else { return }
+                self.namedURL = found
+                self.namedSets = Dictionary(all, uniquingKeysWith: { a, _ in a })
+                self.namedOrder = all.map(\.0)
                 self.applyNamedTexts()
             }
         }
@@ -213,7 +222,9 @@ final class Store: ObservableObject {
         let lang = namedOrder.contains(textLang) ? textLang : (namedOrder.contains(Loc.lang) ? Loc.lang : first)
         let t = namedSets[lang] ?? [:]
         texts = ScriptTexts(url: url, texts: t, language: lang, languages: namedOrder.count > 1 ? namedOrder : [])
-        for i in lines.indices { lines[i].text = t[lines[i].offset] ?? "" }
+        var copy = lines
+        for i in copy.indices { copy[i].text = t[copy[i].offset] ?? "" }
+        lines = copy
     }
 
     /// Autre langue des textes (même fichier ou fichier voisin), retenue pour les prochaines ouvertures.
@@ -263,21 +274,34 @@ final class Store: ObservableObject {
     }
 
     /// Formats compressés : durée et fréquence connues seulement après décodage, fait en arrière-plan.
+    /// Mises à jour groupées (toutes les 300 répliques) : la liste n'est redessinée que quelques fois.
     private func completeDurations(_ b: SoundBank) {
         let pending = b.lines
+        let cache = peakCache
         completeTask = Task.detached(priority: .utility) {
+            var batch: [(Int, Double, Double)] = []
+            func flush() async {
+                let done = batch; batch = []
+                await MainActor.run {
+                    guard self.bank === b else { return }
+                    var copy = self.lines
+                    var index: [Int: Int] = [:]
+                    for (i, l) in copy.enumerated() { index[l.id] = i }
+                    for (id, rate, duration) in done {
+                        b.update(id, rate: rate, duration: duration)
+                        if let i = index[id] { copy[i].rate = rate; copy[i].duration = duration }
+                    }
+                    self.lines = copy
+                }
+            }
             for line in pending {
                 if Task.isCancelled { return }
                 guard let pcm = try? b.decode(line) else { continue }
-                await MainActor.run {
-                    guard self.bank === b else { return }
-                    b.update(line.id, rate: pcm.rate, duration: pcm.duration)
-                    if let i = self.lines.firstIndex(where: { $0.id == line.id }) {
-                        self.lines[i].rate = pcm.rate; self.lines[i].duration = pcm.duration
-                    }
-                    self.peaks[line.id] = Peaks.compute(pcm, count: 64)
-                }
+                cache.set(line.id, Peaks.compute(pcm, count: 64))
+                batch.append((line.id, pcm.rate, pcm.duration))
+                if batch.count >= 300 { await flush() }
             }
+            if !batch.isEmpty { await flush() }
         }
     }
 
@@ -294,9 +318,16 @@ final class Store: ObservableObject {
     }
 
     /// Forme d'onde d'une ligne, calculée à la demande (VOC : immédiat ; compressé : rempli par le décodage de fond).
-    func requestPeaks(_ id: Line.ID) {
-        guard peaks[id] == nil, let b = bank, b.codec != .mp3 && b.codec != .ogg && b.codec != .flac, let line = lines.first(where: { $0.id == id }) else { return }
-        if let pcm = try? b.decode(line) { peaks[id] = Peaks.compute(pcm, count: 64) } else { peaks[id] = [] }
+    /// Forme d'onde d'une réplique, calculée hors du fil principal puis gardée en cache.
+    func peaks(for line: Line) async -> [Float] {
+        if let p = peakCache.get(line.id) { return p }
+        guard let b = bank else { return [] }
+        let cache = peakCache
+        return await Task.detached(priority: .userInitiated) {
+            let p = (try? b.decode(line)).map { Peaks.compute($0, count: 64) } ?? []
+            cache.set(line.id, p)
+            return p
+        }.value
     }
 
     // MARK: Export
@@ -392,3 +423,12 @@ enum BusyFlag {
     }
 }
 
+
+/// Cache des formes d'onde, partagé entre le fil principal et les calculs en arrière-plan.
+final class PeakCache: @unchecked Sendable {
+    private var store: [Int: [Float]] = [:]
+    private let lock = NSLock()
+    func get(_ id: Int) -> [Float]? { lock.lock(); defer { lock.unlock() }; return store[id] }
+    func set(_ id: Int, _ p: [Float]) { lock.lock(); store[id] = p; lock.unlock() }
+    func clear() { lock.lock(); store = [:]; lock.unlock() }
+}

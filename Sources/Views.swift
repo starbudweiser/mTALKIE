@@ -269,7 +269,6 @@ struct LinesToolbar: View {
 /// Liste des répliques : case, lecture, N°, forme d'onde, durée, décalage (maquette B).
 struct LinesTable: View {
     @ObservedObject private var store = Store.shared
-    @ObservedObject private var player = Store.shared.player
 
     var body: some View {
         Table(of: Line.self, selection: $store.selection, sortOrder: $store.sortOrder) {
@@ -283,14 +282,7 @@ struct LinesTable: View {
                         .overlay(RoundedRectangle(cornerRadius: 3).stroke(on ? Socle.C.accentFill : Socle.C.borderControl, lineWidth: 1.2))
                 }.buttonStyle(.plain)
             }.width(20)
-            TableColumn("") { line in
-                let current = player.playing == line.id
-                Button { store.play(line.id) } label: {
-                    Image(systemName: current && player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 9)).frame(width: 18, height: 18)
-                        .foregroundStyle(current ? Socle.C.accentText : Socle.C.text)
-                }.buttonStyle(.plain)
-            }.width(20)
+            TableColumn("") { line in PlayCell(id: line.id) }.width(20)
             TableColumn(L("col.n"), value: \.id) { line in Text(String(format: "%04d", line.id)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted) }.width(48)
             if store.texts != nil {
                 TableColumn(L("col.text"), value: \.text) { line in
@@ -300,9 +292,7 @@ struct LinesTable: View {
                 }.width(min: 160, ideal: store.hasNames ? 280 : 360)
             }
             TableColumn(L("col.wave")) { line in
-                WaveView(peaks: store.peaks[line.id] ?? [], highlight: player.playing == line.id)
-                    .frame(height: 18)
-                    .onAppear { store.requestPeaks(line.id) }
+                WaveCell(line: line)
             }.width(min: 80, ideal: store.texts != nil ? 120 : 400, max: store.texts != nil ? 160 : .infinity)
             TableColumn(L("col.duration"), value: \.duration) { line in
                 Text(line.rate > 0 ? Fmt.short(line.duration) : "…").monospacedDigit()
@@ -311,13 +301,13 @@ struct LinesTable: View {
             }.width(64)
             if store.hasNames {
                 TableColumn(L("col.name"), value: \.name) { line in
-                    Text(line.name).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).textSelection(.enabled).help(line.name)
+                    Text(line.name).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).help(line.name)
                 }.width(min: 110, ideal: 170)
             }
             if !store.hasNames {
                 TableColumn(L("col.offset"), value: \.offset) { line in
                     Text(String(format: "0x%06X", line.offset)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
-                        .frame(maxWidth: .infinity, alignment: .trailing).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }.width(86)
             }
         } rows: {
@@ -354,6 +344,35 @@ enum DragExport {
     }
 }
 
+/// Bouton de lecture d'une ligne : seul ce petit élément suit le lecteur, pas toute la liste.
+struct PlayCell: View {
+    let id: Line.ID
+    @ObservedObject private var player = Store.shared.player
+    var body: some View {
+        let current = player.playing == id
+        Button { Store.shared.play(id) } label: {
+            Image(systemName: current && player.isPlaying ? "pause.fill" : "play.fill")
+                .font(.system(size: 9)).frame(width: 18, height: 18)
+                .foregroundStyle(current ? Socle.C.accentText : Socle.C.text)
+        }.buttonStyle(.plain)
+    }
+}
+
+/// Forme d'onde d'une ligne, chargée en arrière-plan quand la ligne apparaît.
+struct WaveCell: View {
+    let line: Line
+    @ObservedObject private var player = Store.shared.player
+    @State private var peaks: [Float] = []
+    var body: some View {
+        WaveView(peaks: peaks, highlight: player.playing == line.id)
+            .frame(height: 18)
+            .task(id: line.id) {
+                let p = await Store.shared.peaks(for: line)
+                if !Task.isCancelled { peaks = p }
+            }
+    }
+}
+
 struct WaveView: View {
     let peaks: [Float]
     var highlight = false
@@ -373,6 +392,17 @@ struct WaveView: View {
 
 // MARK: - Barre du bas (A : mention « aucun fichier modifié » ; B : lecteur + export)
 
+/// Compteur de lecture « 0001 · 0:00,6 / 0:00,8 » : le seul élément redessiné pendant la lecture.
+struct PlayPosition: View {
+    let id: Int
+    let duration: Double
+    @ObservedObject private var clock = Store.shared.player.clock
+    var body: some View {
+        Text("\(String(format: "%04d", id)) · \(Fmt.short(clock.position)) / \(Fmt.short(duration))")
+            .socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
+    }
+}
+
 struct FooterBar: View {
     @ObservedObject private var store = Store.shared
     @ObservedObject private var player = Store.shared.player
@@ -388,8 +418,7 @@ struct FooterBar: View {
                         .foregroundStyle(Socle.C.accentText).frame(width: 18, height: 18)
                 }.buttonStyle(.plain)
                 if let id = player.playing {
-                    Text("\(String(format: "%04d", id)) · \(Fmt.short(player.position)) / \(Fmt.short(player.duration))")
-                        .socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
+                    PlayPosition(id: id, duration: player.duration)
                 } else {
                     Text(L("player.none")).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1)
                 }

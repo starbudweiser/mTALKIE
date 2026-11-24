@@ -45,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         guard Bundle.main.bundleIdentifier?.hasSuffix(".dev") == true else { return }
         let d = UserDefaults.standard
         if d.bool(forKey: "debugSettings") { showSettings() }
+        if let out = d.string(forKey: "debugScroll") { benchScroll(to: out) }
         let n = d.integer(forKey: "debugSelect")
         guard n > 0 else { return }
         Task { @MainActor in
@@ -56,6 +57,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
                 Store.shared.exportFolder = dir
                 Store.shared.export(selectionOnly: !d.bool(forKey: "debugAll"))
             }
+        }
+    }
+
+    /// Essai de défilement (version de développement) : 300 pas de 3 lignes, un toutes les 16 ms ;
+    /// écrit dans `out` l'intervalle moyen et maximal entre deux pas (un défilement fluide reste près de 16 ms).
+    private func benchScroll(to out: String) {
+        Task { @MainActor in
+            while Store.shared.bank == nil { try? await Task.sleep(for: .milliseconds(200)) }
+            try? await Task.sleep(for: .seconds(2))
+            func find(_ v: NSView) -> NSScrollView? {
+                if let s = v as? NSScrollView, s.documentView is NSTableView { return s }
+                for c in v.subviews { if let f = find(c) { return f } }
+                return nil
+            }
+            guard let root = window?.contentView, let sv = find(root) else { try? "pas de liste".write(toFile: out, atomically: true, encoding: .utf8); return }
+            var gaps: [Double] = []
+            var last = CACurrentMediaTime()
+            for _ in 0 ..< 300 {
+                try? await Task.sleep(for: .milliseconds(16))
+                let clip = sv.contentView
+                clip.scroll(to: NSPoint(x: 0, y: clip.bounds.origin.y + CGFloat(UserDefaults.standard.integer(forKey: "debugStep") > 0 ? UserDefaults.standard.integer(forKey: "debugStep") : 78)))
+                sv.reflectScrolledClipView(clip)
+                sv.displayIfNeeded()
+                let now = CACurrentMediaTime(); gaps.append((now - last) * 1000); last = now
+            }
+            let avg = gaps.reduce(0, +) / Double(gaps.count), mx = gaps.max() ?? 0
+            let slow = gaps.filter { $0 > 50 }.count
+            try? String(format: "moyenne %.1f ms, max %.0f ms, %d pas au-delà de 50 ms", avg, mx, slow).write(toFile: out, atomically: true, encoding: .utf8)
         }
     }
 
