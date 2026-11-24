@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -62,6 +62,7 @@ final class SoundBank: @unchecked Sendable {
         case "xwb": codec = .xwb
         case "bun": codec = .bun
         case "aud": codec = .aud
+        case "m4b": codec = .lab
         default: codec = .voc
         }
         switch codec {
@@ -69,6 +70,7 @@ final class SoundBank: @unchecked Sendable {
         case .xwb: try parseXwb()
         case .bun: lines = try BunArchive.parse(data)
         case .aud: lines = try Sierra.parse(data, url: url)
+        case .lab: lines = try Grime.parse(data)
         default: try parseCompressed()
         }
         guard !lines.isEmpty else { throw FormatError.empty }
@@ -202,6 +204,8 @@ final class SoundBank: @unchecked Sendable {
             return try BunArchive.decode(data, line: line)
         case .aud:
             return try Sierra.decode(data, line: line)
+        case .lab:
+            return try Grime.decode(data, line: line)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -222,7 +226,7 @@ final class SoundBank: @unchecked Sendable {
         let shorts = ["Indiana Jones and the Fate of Atlantis": "Indy 4", "Day of the Tentacle": "DOTT", "Sam & Max Hit the Road": "Sam & Max",
                       "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom",
                       "The Dig": "The Dig", "Full Throttle": "Full Throttle", "The Curse of Monkey Island": "MI3",
-                      "Monkey Island 2: Special Edition": "MI2 SE", "The Secret of Monkey Island: Special Edition": "MI1 SE"]
+                      "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -233,6 +237,7 @@ final class SoundBank: @unchecked Sendable {
         // Éditions spéciales : la banque de sons est dans « audio », le jeu (monkey2.pak) dans le dossier parent.
         let parent = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.deletingLastPathComponent().path)) ?? []).map { $0.uppercased() })
         if url.pathExtension.lowercased() == "aud", let n = Sierra.gameName(dir: dir) { return n }
+        if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }
         if url.pathExtension.lowercased() == "xwb" {
             if parent.contains("MONKEY2.PAK") || names.contains("MONKEY2.PAK") { return "Monkey Island 2: Special Edition" }
             if parent.contains("MONKEY1.PAK") || names.contains("MONKEY1.PAK") { return "The Secret of Monkey Island: Special Edition" }

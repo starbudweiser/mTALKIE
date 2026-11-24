@@ -260,6 +260,33 @@ if FileManager.default.fileExists(atPath: sq6URL.path) {
     } catch { check(false, "Space Quest 6 : \(error)") }
 }
 
+// MARK: 3 sexies. Escape from Monkey Island (GrimE, VIMA)
+let emiURL = URL(fileURLWithPath: "/Volumes/SAMSUNG T7/JEUX/SCUMMVM/Escape from Monkey Island/voiceAll.m4b")
+if FileManager.default.fileExists(atPath: emiURL.path) {
+    print("3 sexies. GrimE : \(emiURL.path)")
+    do {
+        var t0 = Date()
+        let b = try SoundBank(url: emiURL)
+        print(String(format: "    ouverture : %.2f s, %d répliques, %.0f min, %@", Date().timeIntervalSince(t0), b.lines.count, b.totalDuration / 60, b.gameName ?? "?"))
+        check(b.lines.count == 735 && b.gameName == "Escape from Monkey Island" && b.lines[0].name == "clatri001", "archive LABN lue, jeu reconnu")
+        t0 = Date(); var bad = 0, peak: Float = 0
+        for l in b.lines {
+            if let p = try? b.decode(l), abs(p.duration - l.duration) < 0.01 { peak = max(peak, p.samples.map(abs).max() ?? 0) } else { bad += 1 }
+        }
+        print(String(format: "    décodage de toutes les répliques : %.2f s, crête %.2f", Date().timeIntervalSince(t0), peak))
+        check(bad == 0 && peak > 0.1 && peak <= 1, "\(b.lines.count - bad) répliques décodées (\(bad) en échec)")
+        // Empreinte des échantillons, calculée par un portage Python indépendant du décodeur VIMA de ScummVM
+        let s = try b.decode(b.lines[0]).samples.map { Int16(($0 * 32768).rounded()) }
+        let sum = s.reduce(0) { ($0 &* 31 &+ Int(UInt16(bitPattern: $1))) & 0xFFFF_FFFF }
+        print("    clatri001 : \(s.count) échantillons, empreinte \(sum)")
+        check(s.count == 20865 && sum == 2_989_267_807, "VIMA identique au portage de référence")
+        let tx = Grime.texts(dir: emiURL.deletingLastPathComponent())
+        let n = b.lines.filter { tx[$0.name.lowercased()] != nil }.count
+        print("    textes : \(n) répliques sur \(b.lines.count), langue \(Grime.detect(tx))")
+        check(tx["clatri001"] == "Whoaaaaaa!" && n * 10 > b.lines.count * 9, "textes de script.tab (RCNE)")
+    } catch { check(false, "Escape from Monkey Island : \(error)") }
+}
+
 // MARK: 4. Traductions
 print("4. Traductions")
 let keys = Set(Loc.fr.keys)
