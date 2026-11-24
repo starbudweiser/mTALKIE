@@ -14,6 +14,8 @@ final class Store: ObservableObject {
     @Published private(set) var error: String?
     @Published private(set) var loading = false
     @Published private(set) var peaks: [Int: [Float]] = [:]
+    @Published private(set) var texts: ScriptTexts?          // textes des répliques (scripts du jeu)
+    @Published private(set) var textsLoading = false
     @Published var showSettings = false
 
     // Export
@@ -29,6 +31,8 @@ final class Store: ObservableObject {
     @AppStorage("subfolder") var subfolder = true
     @AppStorage("exportFolder") var exportFolder = ""
     @AppStorage("recents") private var recentsRaw = ""
+    /// Fichier de textes choisi à la main pour un fichier de voix (autre langue) : chemin des voix → chemin des scripts.
+    @AppStorage("textsChoice") private var textsChoiceRaw = ""
 
     let player = Player()
     private var completeTask: Task<Void, Never>?
@@ -55,7 +59,10 @@ final class Store: ObservableObject {
             return lines.filter { $0.duration > s }
         }
         let low = f.lowercased()
-        return lines.filter { String(format: "%04d", $0.id).contains(low) || String(format: "%08x", $0.offset).contains(low) }
+        return lines.filter {
+            String(format: "%04d", $0.id).contains(low) || String(format: "%08x", $0.offset).contains(low)
+                || $0.text.range(of: f, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
     }
 
     var destination: URL {
@@ -114,12 +121,53 @@ final class Store: ObservableObject {
     }
 
     private func loaded(_ b: SoundBank) {
-        bank = b; lines = b.lines; selection = []; peaks = [:]; loading = false
+        bank = b; lines = b.lines; selection = []; peaks = [:]; loading = false; texts = nil
         addRecent(b.url)
         if b.codec != .voc { completeDurations(b) }
+        let chosen = textsChoice[b.url.path].map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+        if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
 
-    func close() { player.stop(); bank = nil; lines = []; selection = []; peaks = [:] }
+    func close() { player.stop(); bank = nil; lines = []; selection = []; peaks = [:]; texts = nil }
+
+    // MARK: Textes
+
+    private var textsChoice: [String: String] {
+        get { (try? JSONDecoder().decode([String: String].self, from: Data(textsChoiceRaw.utf8))) ?? [:] }
+        set { textsChoiceRaw = (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) } ?? "" }
+    }
+
+    /// Lit les textes en arrière-plan ; `report` : signaler un échec (fichier choisi à la main).
+    private func loadTexts(_ url: URL, for b: SoundBank, report: Bool) {
+        let offsets = Set(b.lines.map(\.offset))
+        textsLoading = true
+        Task.detached(priority: .userInitiated) {
+            let result = Result { try ScriptTexts.load(url, offsets: offsets) }
+            await MainActor.run {
+                guard self.bank === b else { return }
+                self.textsLoading = false
+                switch result {
+                case .success(let t):
+                    self.texts = t
+                    for i in self.lines.indices { self.lines[i].text = t.texts[self.lines[i].offset] ?? "" }
+                case .failure(let e):
+                    if report { self.error = "\(url.lastPathComponent) : \(e.localizedDescription)" }
+                }
+            }
+        }
+    }
+
+    /// Textes d'une autre édition du jeu (autre langue) : son fichier de scripts, à garder pour ce fichier de voix.
+    func chooseTexts() {
+        guard let b = bank else { return }
+        let p = NSOpenPanel()
+        p.allowsMultipleSelection = false; p.canChooseDirectories = false
+        p.message = L("open.texts")
+        p.directoryURL = texts?.url.deletingLastPathComponent() ?? b.url.deletingLastPathComponent()
+        guard p.runModal() == .OK, let u = p.url else { return }
+        var c = textsChoice; c[b.url.path] = u.path; textsChoice = c
+        loadTexts(u, for: b, report: true)
+    }
 
     static let extensions = ["sou", "so3", "sog", "sof"]
 

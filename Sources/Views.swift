@@ -112,7 +112,20 @@ struct FileCard: View {
             KV(k: L("info.rate"), v: rate)
             let bad = store.lines.filter { !$0.supported }.count
             KV(k: L("info.decode"), v: bad == 0 ? L("info.complete") : L("info.partial", bad), color: bad == 0 ? Socle.C.success : Socle.C.warning)
+            KV(k: L("info.texts"), v: textsValue, color: store.texts == nil ? Socle.C.textMuted : Socle.C.text)
+                .help(store.texts.map { L("info.texts.help", $0.url.lastPathComponent, $0.texts.count) } ?? L("info.texts.none.help"))
+            Button(L("btn.texts")) { store.chooseTexts() }
+                .buttonStyle(.plain).socle(Socle.T.meta).foregroundStyle(Socle.C.accentText)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .help(L("btn.texts.help"))
         }
+    }
+
+    private var textsValue: String {
+        if store.textsLoading { return L("info.pending") }
+        guard let t = store.texts else { return L("info.texts.none") }
+        let n = t.texts.count.formatted(.number.locale(Loc.locale))
+        return [t.languageName, n].compactMap { $0 }.joined(separator: " · ")
     }
 
     private var pending: Bool { store.lines.contains { $0.rate == 0 } }
@@ -264,11 +277,18 @@ struct LinesTable: View {
                 }.buttonStyle(.plain)
             }.width(20)
             TableColumn(L("col.n"), value: \.id) { line in Text(String(format: "%04d", line.id)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted) }.width(48)
+            if store.texts != nil {
+                TableColumn(L("col.text"), value: \.text) { line in
+                    Text(line.text.isEmpty ? "—" : line.text).lineLimit(1).truncationMode(.tail)
+                        .foregroundStyle(line.text.isEmpty ? Socle.C.textMuted : Socle.C.text)
+                        .help(line.text)
+                }.width(min: 160, ideal: 360)
+            }
             TableColumn(L("col.wave")) { line in
                 WaveView(peaks: store.peaks[line.id] ?? [], highlight: player.playing == line.id)
                     .frame(height: 18)
                     .onAppear { store.requestPeaks(line.id) }
-            }
+            }.width(min: 80, ideal: store.texts != nil ? 120 : 400, max: store.texts != nil ? 160 : .infinity)
             TableColumn(L("col.duration"), value: \.duration) { line in
                 Text(line.rate > 0 ? Fmt.short(line.duration) : "…").monospacedDigit()
                     .foregroundStyle(line.supported ? Socle.C.text : Socle.C.warning)
@@ -448,7 +468,7 @@ struct SettingsView: View {
                         TextField("", text: Binding(get: { store.localPattern }, set: { store.localPattern = $0 }))
                             .textFieldStyle(.plain).socle(Socle.T.mono).foregroundStyle(Socle.C.accentText)
                             .padding(.horizontal, Socle.M.space3).frame(width: 220, height: 28).background(Socle.C.bgSunken)
-                            .help(L("set.pattern.help"))
+                            .help(Pattern.localize(L("set.pattern.help")))
                     }
                     row(L("set.variant")) {
                         let t = Pattern.local

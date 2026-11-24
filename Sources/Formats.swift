@@ -26,6 +26,7 @@ struct Line: Identifiable, Hashable {
     var rate: Double         // 0 tant qu'inconnu (formats compressés avant décodage)
     var duration: Double     // idem
     var supported = true     // false : codage VOC non pris en charge (ADPCM rare)
+    var text = ""            // phrase prononcée, lue dans les scripts du jeu (vide si inconnue)
 }
 
 enum FormatError: LocalizedError {

@@ -126,6 +126,41 @@ if CommandLine.arguments.count > 1 {
     } catch { check(false, "\(error)") }
 }
 
+// MARK: 3 bis. Textes des répliques (scripts du jeu)
+print("3 bis. Textes")
+do {
+    func code(_ a: Int) -> [UInt8] { [0xFF, 0x0A, UInt8(a & 255), UInt8(a >> 8 & 255), 0xFF, 0x0A, UInt8(a >> 16 & 255), UInt8(a >> 24 & 255), 0xFF, 0x0A, 0, 0, 0xFF, 0x0A, 0, 0] }
+    let o1 = bank.lines[0].offset, o2 = bank.lines[1].offset
+    var plain: [UInt8] = [1, 2, 3, 0x14, 0x00]
+    plain += code(o1) + Array("Voil".utf8) + [0x85] + Array("  un\u{10}idol".utf8) + [0xFF, 0x03] + Array("e^ ^ok^".utf8) + [0]
+    plain += [7, 7] + code(o2) + Array("Deux".utf8) + [0xFF, 0x0A] + Array("ignoré".utf8) + [0]
+    plain += code(0x7FFFFF) + Array("hors fichier".utf8) + [0]
+    let script = work.appendingPathComponent("ATLANTIS.001")
+    try Data(plain.map { $0 ^ 0x69 }).write(to: script)
+    check(ScriptTexts.find(near: souURL)?.lastPathComponent == script.lastPathComponent, "fichier de scripts trouvé à côté des voix")
+    let st = try ScriptTexts.load(script, offsets: Set(bank.lines.map(\.offset)))
+    check(st.texts[o1] == "Voilà un idol e… ok…", "texte décodé (DOS 437, codes SCUMM retirés) : \(st.texts[o1] ?? "—")")
+    check(st.texts[o2] == "Deux" && st.texts.count == 2, "texte arrêté au code suivant, position inconnue ignorée")
+    var l = bank.lines[0]; l.text = "I'm: a/very \"long\" line, that goes on and on, far beyond sixty characters for sure."
+    let n = Encoder.name(pattern: "{n°}_{texte}", source: souURL, line: l, format: .wav)
+    check(n == "0001_I'm avery long line, that goes on and on, far beyond sixty.wav", "balise {texte} : \(n)")
+    l.text = ""
+    check(Encoder.name(pattern: "{n}_{text}_{offset}", source: souURL, line: l, format: .flac) == String(format: "0001_%08X.flac", l.offset), "réplique sans texte : séparateur retiré")
+    try? FileManager.default.removeItem(at: script)
+} catch { check(false, "textes : \(error)") }
+if CommandLine.arguments.count > 1 {
+    let real = URL(fileURLWithPath: CommandLine.arguments[1])
+    if let b = try? SoundBank(url: real), let sc = ScriptTexts.find(near: real) {
+        let t0 = Date()
+        do {
+            let st = try ScriptTexts.load(sc, offsets: Set(b.lines.map(\.offset)))
+            print(String(format: "    %@ : %d textes sur %d répliques en %.2f s, langue %@", sc.lastPathComponent, st.texts.count, b.lines.count, Date().timeIntervalSince(t0), st.language ?? "?"))
+            check(st.texts.count * 10 > b.lines.count * 9, "plus de 90 % des répliques ont leur texte")
+            print("    ex. : « \(st.texts[b.lines[0].offset] ?? "—") »")
+        } catch { check(false, "textes du vrai jeu : \(error)") }
+    }
+}
+
 // MARK: 4. Traductions
 print("4. Traductions")
 let keys = Set(Loc.fr.keys)

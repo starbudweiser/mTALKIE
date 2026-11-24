@@ -60,14 +60,30 @@ enum Encoder {
         }
     }
 
-    /// Nom de fichier d'après le modèle : {file} nom du fichier source, {n} numéro sur 4 chiffres, {offset} décalage hexadécimal.
+    /// Nom de fichier d'après le modèle : {file} nom du fichier source, {n} numéro sur 4 chiffres, {offset} décalage hexadécimal,
+    /// {text} début de la phrase prononcée (retiré, avec son séparateur, quand la réplique n'a pas de texte).
     static func name(pattern: String, source: URL, line: Line, format: ExportFormat) -> String {
         var s = pattern.isEmpty ? "{file}_{n}" : Pattern.canonical(pattern)
         s = s.replacingOccurrences(of: "{file}", with: source.deletingPathExtension().lastPathComponent)
         s = s.replacingOccurrences(of: "{n}", with: String(format: "%04d", line.id))
         s = s.replacingOccurrences(of: "{offset}", with: String(format: "%08X", line.offset))
         s = s.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        s = s.replacingOccurrences(of: "{text}", with: textPart(line.text))
+        while let r = s.range(of: "__") { s.replaceSubrange(r, with: "_") }
+        s = s.trimmingCharacters(in: CharacterSet(charactersIn: "_- ."))
+        if s.isEmpty { s = String(format: "%04d", line.id) }
         return s + "." + (format == .aiff ? "aif" : format.rawValue)
+    }
+
+    /// Phrase utilisable dans un nom de fichier : caractères interdits retirés, 60 caractères au plus, coupée entre deux mots.
+    static func textPart(_ text: String) -> String {
+        let banned = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters)
+        var t = String(text.unicodeScalars.filter { !banned.contains($0) }).trimmingCharacters(in: .whitespaces)
+        if t.count > 60 {
+            t = String(t.prefix(60))
+            if let sp = t.lastIndex(of: " "), t.distance(from: t.startIndex, to: sp) > 30 { t = String(t[..<sp]) }
+        }
+        return t.trimmingCharacters(in: CharacterSet(charactersIn: " .,;!-…"))
     }
 }
 
@@ -145,10 +161,10 @@ enum Peaks {
 /// Balises du modèle de nom : forme interne {file} {n} {offset}, affichées dans la langue de l'interface.
 enum Pattern {
     static let tokens: [String: [String]] = [
-        "fr": ["{fichier}", "{n°}", "{décalage}"], "en": ["{file}", "{n}", "{offset}"],
-        "es": ["{archivo}", "{n.º}", "{posición}"], "it": ["{file}", "{n.}", "{posizione}"],
+        "fr": ["{fichier}", "{n°}", "{décalage}", "{texte}"], "en": ["{file}", "{n}", "{offset}", "{text}"],
+        "es": ["{archivo}", "{n.º}", "{posición}", "{texto}"], "it": ["{file}", "{n.}", "{posizione}", "{testo}"],
     ]
-    static let canonicalTokens = ["{file}", "{n}", "{offset}"]
+    static let canonicalTokens = ["{file}", "{n}", "{offset}", "{text}"]
     static var local: [String] { tokens[Loc.lang] ?? canonicalTokens }
 
     static func localize(_ s: String) -> String {
