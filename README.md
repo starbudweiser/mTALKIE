@@ -30,6 +30,11 @@ Swift, no ffmpeg or other dependency. Original files are never modified.
 - Play with a double-click or Space; drag a line to the Finder to get a WAV.
 - Export all or the selection: 8-bit WAV (bit-exact copy of the original samples), 16-bit AIFF or FLAC; file name pattern
   with `{file}`, `{n}`, `{offset}`, `{text}` and `{name}`; one subfolder per game.
+- **Send to mCASTING** (the DESKTOP MAC TOOLKIT voice-casting app): pick lines of one character, name the voice, and
+  mTALKIE assembles a clean 15–25 s clip whose reference text comes from the subtitles, ready to clone. Or send a whole
+  game's lines (text, speaker guessed from the line names and editable, automatic tags, light AAC audio) to mCASTING's
+  searchable line database. Format: mCASTING's `docs/INBOX.md`. Game lines and voices are copyrighted: private use and
+  tests only.
 - French, English, Spanish and Italian interface. Automatic updates from the GitHub releases.
 
 ## Format notes

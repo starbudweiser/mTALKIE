@@ -3,6 +3,7 @@
 // 2. Mêmes répliques en .SO3 / .SOG / .SOF (mise en page de compress_scumm_sou, encodage ffmpeg) : index et décodage.
 // 3. Vrai MONSTER.SOU s'il est présent (chemin en argument) : nombre de répliques, décodage et export de toutes.
 // 4. Tables de traduction : mêmes clés dans les 4 langues.
+import AVFoundation
 import Foundation
 
 var failures = 0
@@ -286,6 +287,27 @@ if FileManager.default.fileExists(atPath: emiURL.path) {
         check(tx["clatri001"] == "Whoaaaaaa!" && n * 10 > b.lines.count * 9, "textes de script.tab (RCNE)")
     } catch { check(false, "Escape from Monkey Island : \(error)") }
 }
+
+// MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
+print("3 septies. Envoi vers mCASTING")
+check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == "", "préfixes des répliques nommées")
+check(CastingLink.tags("You fight like a cow.").contains("insult") && CastingLink.tags("Hello there?") == ["greeting", "question"]
+      && CastingLink.tags("Ahhh!") == ["scream"] && CastingLink.tags("Hahaha, fool!").contains("laugh"), "étiquettes automatiques")
+do {
+    // Banque de synthèse : 10 répliques de 3 s, texte connu → extrait coupé à 25 s, texte de référence, paquets complets.
+    let home = FileManager.default.temporaryDirectory.appendingPathComponent("mtalkie-casting-\(getpid())")
+    setenv("MCASTING_HOME", home.path, 1); defer { try? FileManager.default.removeItem(at: home) }
+    let tone = (0 ..< 3 * 22_050).map { Float(sin(Double($0) * 0.05) * 0.3) }
+    let pcm = PCM(rate: 22_050, channels: 1, samples: tone, bits: 16)
+    let sou = home.appendingPathComponent("t.wav"); try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+    try WavWriter.data(pcm).write(to: sou)
+    let mixed = try CastingLink.mono(PCM(rate: 22_050, channels: 2, samples: tone.flatMap { [$0, $0] }, bits: 16), rate: 24_000)
+    check(abs(mixed.count - 3 * 24_000) < 64, "mono 24 kHz depuis du stéréo 22,05 kHz (\(mixed.count) échantillons)")
+    let aac = home.appendingPathComponent("a.aac"); try CastingLink.writeAAC(pcm, to: aac)
+    let size = (try? FileManager.default.attributesOfItem(atPath: aac.path)[.size] as? Int) ?? 0
+    let back = try AVAudioFile(forReading: aac)
+    check(size > 4_000 && size < 3 * 6_000 && abs(Double(back.length) / back.processingFormat.sampleRate - 3) < 0.3, "AAC ADTS léger et relisible (\(size) octets)")
+} catch { check(false, "envoi vers mCASTING : \(error)") }
 
 // MARK: 4. Traductions
 print("4. Traductions")

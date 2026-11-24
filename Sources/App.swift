@@ -165,6 +165,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc func exportSelection() { Store.shared.export(selectionOnly: true) }
     @objc func exportAll() { Store.shared.export(selectionOnly: false) }
     @objc func playPause() { Store.shared.playSelection() }
+    @objc func castVoice() { CastingSender.shared.open(.voice) }
+    @objc func castLines() { CastingSender.shared.open(.lines) }
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         let s = Store.shared
@@ -172,6 +174,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         case #selector(closeFile), #selector(playPause): return s.bank != nil
         case #selector(exportSelection): return s.bank != nil && !s.selection.isEmpty && !s.exporting
         case #selector(exportAll): return s.bank != nil && !s.exporting
+        case #selector(castVoice): return s.bank != nil && !s.selection.isEmpty && CastingLink.available && !CastingSender.shared.sending
+        case #selector(castLines): return s.bank != nil && CastingLink.available && !CastingSender.shared.sending
         default: return true
         }
     }
@@ -225,6 +229,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             item(L("menu.close"), #selector(closeFile), "w", [.command, .shift]), .separator(),
             item(L("menu.exportSel"), #selector(exportSelection), "e"),
             item(L("menu.exportAll"), #selector(exportAll), "e", [.command, .shift]), .separator(),
+            item(L("cast.menu") + " · " + L("cast.menu.voice"), #selector(castVoice)),
+            item(L("cast.menu") + " · " + L("cast.menu.lines"), #selector(castLines)), .separator(),
             item(L("menu.closeWindow"), #selector(NSWindow.performClose(_:)), "w", target: nil),
         ])
         let edit: [NSMenuItem] = [

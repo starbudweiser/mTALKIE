@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject private var store = Store.shared
+    @ObservedObject private var sender = CastingSender.shared
     @State private var dropHover = false
 
     var body: some View {
@@ -27,6 +28,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: Binding(get: { store.exporting || store.exportReport != nil }, set: { if !$0 { store.dismissReport() } })) {
             ExportSheet()
+        }
+        .sheet(item: $sender.sheet) { s in
+            if s == .voice { CastVoiceSheet() } else { CastLinesSheet() }
         }
         .ignoresSafeArea(.container, edges: .top)
     }
@@ -426,6 +430,7 @@ struct FooterBar: View {
                 Spacer()
                 Text(store.selection.isEmpty ? L("count.lines", store.lines.count) : L("count.selected", store.selection.count))
                     .socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).fixedSize()
+                CastingMenu()
                 Button(L("btn.exportSel")) { store.export(selectionOnly: true) }
                     .buttonStyle(SocleButtonStyle(.secondary, height: 28)).fixedSize()
                     .disabled(store.selection.isEmpty || store.exporting)
