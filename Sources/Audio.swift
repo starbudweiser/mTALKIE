@@ -69,6 +69,7 @@ enum Encoder {
         s = s.replacingOccurrences(of: "{offset}", with: String(format: "%08X", line.offset))
         s = s.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
         s = s.replacingOccurrences(of: "{text}", with: textPart(line.text))
+        s = s.replacingOccurrences(of: "{name}", with: textPart(line.name))
         while let r = s.range(of: "__") { s.replaceSubrange(r, with: "_") }
         s = s.trimmingCharacters(in: CharacterSet(charactersIn: "_- ."))
         if s.isEmpty { s = String(format: "%04d", line.id) }
@@ -161,10 +162,10 @@ enum Peaks {
 /// Balises du modèle de nom : forme interne {file} {n} {offset}, affichées dans la langue de l'interface.
 enum Pattern {
     static let tokens: [String: [String]] = [
-        "fr": ["{fichier}", "{n°}", "{décalage}", "{texte}"], "en": ["{file}", "{n}", "{offset}", "{text}"],
-        "es": ["{archivo}", "{n.º}", "{posición}", "{texto}"], "it": ["{file}", "{n.}", "{posizione}", "{testo}"],
+        "fr": ["{fichier}", "{n°}", "{décalage}", "{texte}", "{nom}"], "en": ["{file}", "{n}", "{offset}", "{text}", "{name}"],
+        "es": ["{archivo}", "{n.º}", "{posición}", "{texto}", "{nombre}"], "it": ["{file}", "{n.}", "{posizione}", "{testo}", "{nome}"],
     ]
-    static let canonicalTokens = ["{file}", "{n}", "{offset}", "{text}"]
+    static let canonicalTokens = ["{file}", "{n}", "{offset}", "{text}", "{name}"]
     static var local: [String] { tokens[Loc.lang] ?? canonicalTokens }
 
     static func localize(_ s: String) -> String {

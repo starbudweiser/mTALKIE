@@ -161,6 +161,47 @@ if CommandLine.arguments.count > 1 {
     }
 }
 
+// MARK: 3 ter. Édition spéciale (banque XACT .xwb)
+let seURL = URL(fileURLWithPath: "/Volumes/SAMSUNG T7/JEUX/SCUMMVM/Monkey Island 2 SE/audio/Speech.xwb")
+if FileManager.default.fileExists(atPath: seURL.path) {
+    print("3 ter. Édition spéciale : \(seURL.path)")
+    do {
+        let t0 = Date()
+        let b = try SoundBank(url: seURL)
+        print(String(format: "    ouverture : %.2f s, %d répliques, %.0f min, %@ (%@)", Date().timeIntervalSince(t0), b.lines.count, b.totalDuration / 60, b.gameName ?? "?", b.xwbFormat))
+        check(b.lines.count == 7157 && b.gameName == "Monkey Island 2: Special Edition", "banque lue, jeu reconnu")
+        check(b.lines[0].name == "POT_55_entryway_17_1" && b.lines.filter { $0.name.isEmpty }.isEmpty, "chaque son a son nom (.xsb)")
+        let pcm = try b.decode(b.lines[0])
+        check(abs(pcm.duration - b.lines[0].duration) < 0.01, String(format: "MS ADPCM décodé : %.2f s à %.0f Hz", pcm.duration, pcm.rate))
+        // Comparaison avec le décodeur MS ADPCM de ffmpeg (fichier WAV enveloppant les mêmes octets)
+        let l = b.lines[0], raw = b.data.subdata(in: b.data.startIndex + l.start ..< b.data.startIndex + l.start + l.length)
+        var h = Data()
+        func w32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { h.append(contentsOf: $0) } }
+        func w16(_ v: Int) { withUnsafeBytes(of: UInt16(truncatingIfNeeded: v).littleEndian) { h.append(contentsOf: $0) } }
+        let coefs = [(256, 0), (512, -256), (0, 0), (192, 64), (240, 0), (460, -208), (392, -232)]
+        h.append(contentsOf: Array("RIFF".utf8)); w32(UInt32(4 + 8 + 50 + 8 + raw.count)); h.append(contentsOf: Array("WAVEfmt ".utf8)); w32(50)
+        w16(2); w16(1); w32(UInt32(l.rate)); w32(UInt32(l.rate) * 70 / 128); w16(70); w16(4); w16(32); w16(128); w16(7)
+        for (a, c) in coefs { w16(a); w16(c) }
+        h.append(contentsOf: Array("data".utf8)); w32(UInt32(raw.count)); h.append(raw)
+        let inWav = work.appendingPathComponent("adpcm.wav"), outRaw = work.appendingPathComponent("adpcm.raw")
+        try h.write(to: inWav)
+        if ffmpeg(inWav, outRaw, ["-f", "s16le"]), let ref = try? Data(contentsOf: outRaw) {
+            let refS = ref.withUnsafeBytes { Array($0.bindMemory(to: Int16.self)) }
+            let mine = pcm.samples.map { Int16(($0 * 32768).rounded()) }
+            let n = min(refS.count, mine.count)
+            let diff = (0 ..< n).first { refS[$0] != mine[$0] }
+            check(n > 0 && diff == nil && refS.count == mine.count, "identique au décodeur de ffmpeg (\(n) échantillons)" + (diff.map { " — écart à \($0) : \(refS[$0]) / \(mine[$0]), tailles \(refS.count) / \(mine.count)" } ?? ""))
+        }
+        let names = Dictionary(uniqueKeysWithValues: b.lines.map { ($0.offset, $0.name) })
+        let info = Xact.infoTexts(Xact.infoFile(for: seURL)!)
+        let fr = Xact.texts(names: names, info: info, language: "fr")
+        check(fr[0] == "A la santé d'Elaine Marley!", "texte français : \(fr[0] ?? "—")")
+        check(fr.count * 10 > b.lines.count * 9, "\(fr.count) répliques sur \(b.lines.count) ont leur texte")
+        var line = b.lines[0]; line.text = fr[0] ?? ""
+        check(Encoder.name(pattern: "{nom}_{texte}", source: seURL, line: line, format: .wav) == "POT_55_entryway_17_1_A la santé d'Elaine Marley.wav", "balise {nom}")
+    } catch { check(false, "édition spéciale : \(error)") }
+}
+
 // MARK: 4. Traductions
 print("4. Traductions")
 let keys = Set(Loc.fr.keys)

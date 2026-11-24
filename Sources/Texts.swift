@@ -8,6 +8,7 @@ struct ScriptTexts {
     let url: URL
     let texts: [Int: String]      // position VCTL → texte
     let language: String?         // code ISO détecté (« en », « fr »…)
+    var languages: [String] = []  // éditions spéciales : langues proposées (toutes dans le même fichier)
 
     enum Failure: LocalizedError {
         case unreadable, noMatch

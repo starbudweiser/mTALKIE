@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac }
+enum Codec: String { case voc, mp3, ogg, flac, xwb }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -27,12 +27,15 @@ struct Line: Identifiable, Hashable {
     var duration: Double     // idem
     var supported = true     // false : codage VOC non pris en charge (ADPCM rare)
     var text = ""            // phrase prononcée, lue dans les scripts du jeu (vide si inconnue)
+    var name = ""            // nom de la réplique (éditions spéciales : « GUY_4_shore_11_1 »)
 }
 
 enum FormatError: LocalizedError {
-    case unreadable, notSoundBank, empty
+    case unreadable, notSoundBank, empty, unsupportedXwb, unsupportedCodec
     var errorDescription: String? {
         switch self {
+        case .unsupportedXwb: return L("err.xwb")
+        case .unsupportedCodec: return L("err.codec")
         case .unreadable: return L("err.unreadable")
         case .notSoundBank: return L("err.notsou")
         case .empty: return L("err.empty")
@@ -46,6 +49,7 @@ final class SoundBank: @unchecked Sendable {
     let data: Data
     let codec: Codec
     private(set) var lines: [Line] = []
+    private var xact: [Xact.Entry] = []     // .xwb : format de chaque son, dans l'ordre des répliques
 
     init(url: URL) throws {
         self.url = url
@@ -55,9 +59,14 @@ final class SoundBank: @unchecked Sendable {
         case "so3": codec = .mp3
         case "sog": codec = .ogg
         case "sof": codec = .flac
+        case "xwb": codec = .xwb
         default: codec = .voc
         }
-        if codec == .voc { try parseSou() } else { try parseCompressed() }
+        switch codec {
+        case .voc: try parseSou()
+        case .xwb: try parseXwb()
+        default: try parseCompressed()
+        }
         guard !lines.isEmpty else { throw FormatError.empty }
     }
 
@@ -154,6 +163,23 @@ final class SoundBank: @unchecked Sendable {
         }
     }
 
+    // MARK: .xwb (éditions spéciales)
+
+    private func parseXwb() throws {
+        let parsed = try Xact.parse(data)
+        lines = parsed.map(\.0); xact = parsed.map(\.1)
+        if let cues = Xact.cueFile(for: url) {
+            let names = Xact.cueNames(cues)
+            for i in lines.indices { lines[i].name = names[lines[i].offset] ?? "" }
+        }
+    }
+
+    /// Codage dominant d'une banque .xwb (« MS ADPCM », « PCM 16 bits »…).
+    var xwbFormat: String {
+        guard let e = xact.first else { return "" }
+        switch e.tag { case 0: return "PCM \(e.bits) bits"; case 1: return "XMA"; case 2: return "MS ADPCM"; default: return "xWMA" }
+    }
+
     private func be32(_ p: Int) -> UInt32 {
         let s = data.startIndex + p
         return UInt32(data[s]) << 24 | UInt32(data[s + 1]) << 16 | UInt32(data[s + 2]) << 8 | UInt32(data[s + 3])
@@ -166,6 +192,8 @@ final class SoundBank: @unchecked Sendable {
         case .voc:
             return try VocDecoder.decode(data, start: line.start, end: line.start + line.length,
                                          headerSize: data[data.startIndex + line.start] == UInt8(ascii: "V") ? 26 : nil)
+        case .xwb:
+            return try Xact.decode(data, line: line, entry: xact[line.id - 1])
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -184,7 +212,8 @@ final class SoundBank: @unchecked Sendable {
     /// Nom complet et nom court (liste des récents) du jeu d'après les fichiers voisins.
     static func game(for url: URL) -> (name: String, short: String)? {
         let shorts = ["Indiana Jones and the Fate of Atlantis": "Indy 4", "Day of the Tentacle": "DOTT", "Sam & Max Hit the Road": "Sam & Max",
-                      "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom"]
+                      "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom",
+                      "Monkey Island 2: Special Edition": "MI2 SE", "The Secret of Monkey Island: Special Edition": "MI1 SE"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -192,6 +221,12 @@ final class SoundBank: @unchecked Sendable {
     private static func gameFullName(_ url: URL) -> String? {
         let dir = url.deletingLastPathComponent()
         let names = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).map { $0.uppercased() })
+        // Éditions spéciales : la banque de sons est dans « audio », le jeu (monkey2.pak) dans le dossier parent.
+        let parent = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.deletingLastPathComponent().path)) ?? []).map { $0.uppercased() })
+        if url.pathExtension.lowercased() == "xwb" {
+            if parent.contains("MONKEY2.PAK") || names.contains("MONKEY2.PAK") { return "Monkey Island 2: Special Edition" }
+            if parent.contains("MONKEY1.PAK") || names.contains("MONKEY1.PAK") { return "The Secret of Monkey Island: Special Edition" }
+        }
         let known: [(String, String)] = [("ATLANTIS.000", "Indiana Jones and the Fate of Atlantis"), ("TENTACLE.000", "Day of the Tentacle"),
                                          ("SAMNMAX.000", "Sam & Max Hit the Road"), ("SAMNMAX.SM0", "Sam & Max Hit the Road"),
                                          ("MONKEY2.000", "Monkey Island 2"), ("MONKEY.000", "The Secret of Monkey Island"),

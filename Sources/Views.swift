@@ -41,7 +41,8 @@ struct HeaderBar: View {
             Text(branded: "mTALKIE").socle(Socle.T.title).foregroundStyle(Socle.C.textStrong)
             Spacer()
             if let b = store.bank {
-                Text(L("game.cd", b.gameName ?? b.url.deletingLastPathComponent().lastPathComponent))
+                Text(b.codec == .xwb ? (b.gameName ?? b.url.deletingLastPathComponent().lastPathComponent)
+                     : L("game.cd", b.gameName ?? b.url.deletingLastPathComponent().lastPathComponent))
                     .socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(1)
             }
             Button(L("btn.open")) { store.chooseFile() }.buttonStyle(SocleButtonStyle(.secondary, height: 26)).fixedSize()
@@ -106,7 +107,7 @@ struct FileCard: View {
             SectionTitle(L("side.file"))
             Text(bank.url.lastPathComponent).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.middle)
                 .help(bank.url.path)
-            KV(k: L("info.format"), v: bank.codec == .voc ? L("info.voc") : bank.codec.rawValue.uppercased())
+            KV(k: L("info.format"), v: bank.codec == .voc ? L("info.voc") : bank.codec == .xwb ? bank.xwbFormat : bank.codec.rawValue.uppercased())
             KV(k: L("info.lines"), v: store.lines.count.formatted(.number.locale(Loc.locale)))
             KV(k: L("info.duration"), v: pending ? L("info.pending") : Fmt.long(store.lines.reduce(0) { $0 + $1.duration }))
             KV(k: L("info.rate"), v: rate)
@@ -114,10 +115,24 @@ struct FileCard: View {
             KV(k: L("info.decode"), v: bad == 0 ? L("info.complete") : L("info.partial", bad), color: bad == 0 ? Socle.C.success : Socle.C.warning)
             KV(k: L("info.texts"), v: textsValue, color: store.texts == nil ? Socle.C.textMuted : Socle.C.text)
                 .help(store.texts.map { L("info.texts.help", $0.url.lastPathComponent, $0.texts.count) } ?? L("info.texts.none.help"))
-            Button(L("btn.texts")) { store.chooseTexts() }
-                .buttonStyle(.plain).socle(Socle.T.meta).foregroundStyle(Socle.C.accentText)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .help(L("btn.texts.help"))
+            if let t = store.texts, !t.languages.isEmpty {
+                // Éditions spéciales : toutes les langues sont dans le même fichier
+                Menu {
+                    ForEach(t.languages, id: \.self) { code in
+                        Button { store.setTextLanguage(code) } label: {
+                            let name = Loc.locale.localizedString(forLanguageCode: code)?.capitalized(with: Loc.locale) ?? code
+                            if code == t.language { Label(name, systemImage: "checkmark") } else { Text(name) }
+                        }
+                    }
+                } label: { Text(L("btn.textsLang")).socle(Socle.T.meta).foregroundStyle(Socle.C.accentText) }
+                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                Button(L("btn.texts")) { store.chooseTexts() }
+                    .buttonStyle(.plain).socle(Socle.T.meta).foregroundStyle(Socle.C.accentText)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .help(L("btn.texts.help"))
+            }
         }
     }
 
@@ -282,7 +297,7 @@ struct LinesTable: View {
                     Text(line.text.isEmpty ? "—" : line.text).lineLimit(1).truncationMode(.tail)
                         .foregroundStyle(line.text.isEmpty ? Socle.C.textMuted : Socle.C.text)
                         .help(line.text)
-                }.width(min: 160, ideal: 360)
+                }.width(min: 160, ideal: store.hasNames ? 280 : 360)
             }
             TableColumn(L("col.wave")) { line in
                 WaveView(peaks: store.peaks[line.id] ?? [], highlight: player.playing == line.id)
@@ -294,10 +309,17 @@ struct LinesTable: View {
                     .foregroundStyle(line.supported ? Socle.C.text : Socle.C.warning)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }.width(64)
-            TableColumn(L("col.offset"), value: \.offset) { line in
-                Text(String(format: "0x%06X", line.offset)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .trailing).textSelection(.enabled)
-            }.width(86)
+            if store.hasNames {
+                TableColumn(L("col.name"), value: \.name) { line in
+                    Text(line.name).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).textSelection(.enabled).help(line.name)
+                }.width(min: 110, ideal: 170)
+            }
+            if !store.hasNames {
+                TableColumn(L("col.offset"), value: \.offset) { line in
+                    Text(String(format: "0x%06X", line.offset)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .trailing).textSelection(.enabled)
+                }.width(86)
+            }
         } rows: {
             ForEach(store.visibleLines) { line in
                 TableRow(line).itemProvider { DragExport.provider(for: line.id) }
