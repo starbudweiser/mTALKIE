@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -60,11 +60,13 @@ final class SoundBank: @unchecked Sendable {
         case "sog": codec = .ogg
         case "sof": codec = .flac
         case "xwb": codec = .xwb
+        case "bun": codec = .bun
         default: codec = .voc
         }
         switch codec {
         case .voc: try parseSou()
         case .xwb: try parseXwb()
+        case .bun: lines = try BunArchive.parse(data)
         default: try parseCompressed()
         }
         guard !lines.isEmpty else { throw FormatError.empty }
@@ -194,6 +196,8 @@ final class SoundBank: @unchecked Sendable {
                                          headerSize: data[data.startIndex + line.start] == UInt8(ascii: "V") ? 26 : nil)
         case .xwb:
             return try Xact.decode(data, line: line, entry: xact[line.id - 1])
+        case .bun:
+            return try BunArchive.decode(data, line: line)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -213,6 +217,7 @@ final class SoundBank: @unchecked Sendable {
     static func game(for url: URL) -> (name: String, short: String)? {
         let shorts = ["Indiana Jones and the Fate of Atlantis": "Indy 4", "Day of the Tentacle": "DOTT", "Sam & Max Hit the Road": "Sam & Max",
                       "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom",
+                      "The Dig": "The Dig", "Full Throttle": "Full Throttle", "The Curse of Monkey Island": "MI3",
                       "Monkey Island 2: Special Edition": "MI2 SE", "The Secret of Monkey Island: Special Edition": "MI1 SE"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
@@ -230,7 +235,8 @@ final class SoundBank: @unchecked Sendable {
         let known: [(String, String)] = [("ATLANTIS.000", "Indiana Jones and the Fate of Atlantis"), ("TENTACLE.000", "Day of the Tentacle"),
                                          ("SAMNMAX.000", "Sam & Max Hit the Road"), ("SAMNMAX.SM0", "Sam & Max Hit the Road"),
                                          ("MONKEY2.000", "Monkey Island 2"), ("MONKEY.000", "The Secret of Monkey Island"),
-                                         ("LOOM.000", "Loom"), ("MONKEY1.000", "The Secret of Monkey Island")]
+                                         ("LOOM.000", "Loom"), ("MONKEY1.000", "The Secret of Monkey Island"),
+                                         ("DIG.LA0", "The Dig"), ("FT.LA0", "Full Throttle"), ("COMI.LA0", "The Curse of Monkey Island")]
         return known.first { names.contains($0.0) }?.1
     }
 }

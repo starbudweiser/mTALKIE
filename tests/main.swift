@@ -202,6 +202,33 @@ if FileManager.default.fileExists(atPath: seURL.path) {
     } catch { check(false, "édition spéciale : \(error)") }
 }
 
+// MARK: 3 quater. Archive .BUN (The Dig)
+let digURL = URL(fileURLWithPath: "/Volumes/SAMSUNG T7/JEUX/SCUMMVM/The Dig/DIGVOICE.BUN")
+if FileManager.default.fileExists(atPath: digURL.path) {
+    print("3 quater. Archive iMUSE : \(digURL.path)")
+    do {
+        var t0 = Date()
+        let b = try SoundBank(url: digURL)
+        print(String(format: "    ouverture : %.2f s, %d fichiers, %@", Date().timeIntervalSince(t0), b.lines.count, b.gameName ?? "?"))
+        check(b.lines.count == 4008 && b.gameName == "The Dig" && b.lines[0].name == "LIFEDIAL001", "archive lue, jeu reconnu, noms des fichiers")
+        let pcm = try b.decode(b.lines[0])
+        check(pcm.rate == 22050 && pcm.bits == 8 && pcm.duration > 1, String(format: "LIFEDIAL001 décompressé : %.2f s à %.0f Hz, %d bits", pcm.duration, pcm.rate, pcm.bits))
+        t0 = Date(); var bad = 0, total = 0.0
+        for l in b.lines { if let p = try? b.decode(l) { total += p.duration } else { bad += 1 } }
+        print(String(format: "    décodage de toute l'archive : %.2f s, %.0f min", Date().timeIntervalSince(t0), total / 60))
+        check(bad == 0, "\(b.lines.count - bad) fichiers décodés (\(bad) en échec)")
+        t0 = Date()
+        if let found = BunArchive.textSets(near: digURL) {
+            for (lang, dict) in found.sets {
+                let n = b.lines.filter { dict[$0.name] != nil }.count
+                print(String(format: "    textes %@ : %d répliques sur %d (%.2f s)", lang, n, b.lines.count, Date().timeIntervalSince(t0)))
+            }
+            check(found.sets.first?.1["LIFEDIAL001"] == "Do you think it's possible to raise the dead?", "texte anglais (DIG.LA1)")
+            check(found.sets.count == 2 && found.sets[1].0 == "fr" && found.sets[1].1["AIRLOCK003"] == "Venez de ce côté.", "texte français (LANGUAGE.BND)")
+        } else { check(false, "textes de The Dig introuvables") }
+    } catch { check(false, "The Dig : \(error)") }
+}
+
 // MARK: 4. Traductions
 print("4. Traductions")
 let keys = Set(Loc.fr.keys)

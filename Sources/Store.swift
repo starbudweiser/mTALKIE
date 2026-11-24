@@ -34,9 +34,8 @@ final class Store: ObservableObject {
     @AppStorage("recents") private var recentsRaw = ""
     /// Fichier de textes choisi à la main pour un fichier de voix (autre langue) : chemin des voix → chemin des scripts.
     @AppStorage("textsChoice") private var textsChoiceRaw = ""
-    /// Éditions spéciales : langue des textes choisie (vide : celle de l'interface).
-    @AppStorage("xwbLang") private var xwbLang = ""
-    private var xactInfo: [String: [String]] = [:]
+    /// Langue des textes choisie quand le jeu en propose plusieurs (vide : celle de l'interface).
+    @AppStorage("xwbLang") private var textLang = ""
 
     let player = Player()
     private var completeTask: Task<Void, Never>?
@@ -130,7 +129,7 @@ final class Store: ObservableObject {
         hasNames = b.lines.contains { !$0.name.isEmpty }
         addRecent(b.url)
         if b.lines.contains(where: { $0.rate == 0 }) { completeDurations(b) }
-        if b.codec == .xwb { loadXactTexts(b); return }
+        if b.codec == .xwb || b.codec == .bun { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
         let chosen = textsChoice[b.url.path].map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
@@ -164,36 +163,58 @@ final class Store: ObservableObject {
         }
     }
 
-    /// Éditions spéciales : speech.info contient les textes en 5 langues, liés aux répliques par leur nom.
-    private func loadXactTexts(_ b: SoundBank) {
-        guard let info = Xact.infoFile(for: b.url) else { return }
+    /// Textes liés aux répliques par leur nom, dans plusieurs langues :
+    /// éditions spéciales (speech.info, 5 langues) et archives .BUN (scripts du jeu + LANGUAGE.BND).
+    private func loadNamedTexts(_ b: SoundBank) {
+        let lines = b.lines
         textsLoading = true
         Task.detached(priority: .userInitiated) {
-            let dict = Xact.infoTexts(info)
+            var url: URL?
+            var sets: [(String, [Int: String])] = []
+            if b.codec == .xwb, let info = Xact.infoFile(for: b.url) {
+                let dict = Xact.infoTexts(info)
+                var names: [Int: String] = [:]
+                for l in lines where !l.name.isEmpty { names[l.offset] = l.name }
+                if !dict.isEmpty {
+                    url = info
+                    sets = Xact.infoLanguages.map { ($0, Xact.texts(names: names, info: dict, language: $0)) }
+                }
+            } else if b.codec == .bun, let found = BunArchive.textSets(near: b.url) {
+                url = found.url
+                sets = found.sets.map { lang, dict in
+                    var t: [Int: String] = [:]
+                    for l in lines { if let x = dict[l.name.uppercased()] { t[l.offset] = x } }
+                    return (lang, t)
+                }.filter { !$0.1.isEmpty }
+            }
             await MainActor.run {
                 guard self.bank === b else { return }
                 self.textsLoading = false
-                self.xactInfo = dict
-                if !dict.isEmpty { self.applyXactTexts(info) }
+                guard let url, !sets.isEmpty else { return }
+                self.namedURL = url
+                self.namedSets = Dictionary(sets, uniquingKeysWith: { a, _ in a })
+                self.namedOrder = sets.map(\.0)
+                self.applyNamedTexts()
             }
         }
     }
 
-    private func applyXactTexts(_ info: URL) {
-        let langs = Xact.infoLanguages
-        let lang = langs.contains(xwbLang) ? xwbLang : (langs.contains(Loc.lang) ? Loc.lang : "en")
-        var names: [Int: String] = [:]
-        for l in lines where !l.name.isEmpty { names[l.offset] = l.name }
-        let t = Xact.texts(names: names, info: xactInfo, language: lang)
-        texts = ScriptTexts(url: info, texts: t, language: lang, languages: langs)
+    private var namedSets: [String: [Int: String]] = [:]
+    private var namedOrder: [String] = []
+    private var namedURL: URL?
+
+    private func applyNamedTexts() {
+        guard let url = namedURL, let first = namedOrder.first else { return }
+        let lang = namedOrder.contains(textLang) ? textLang : (namedOrder.contains(Loc.lang) ? Loc.lang : first)
+        let t = namedSets[lang] ?? [:]
+        texts = ScriptTexts(url: url, texts: t, language: lang, languages: namedOrder.count > 1 ? namedOrder : [])
         for i in lines.indices { lines[i].text = t[lines[i].offset] ?? "" }
     }
 
-    /// Éditions spéciales : autre langue des textes, retenue pour les prochaines ouvertures.
+    /// Autre langue des textes (même fichier ou fichier voisin), retenue pour les prochaines ouvertures.
     func setTextLanguage(_ code: String) {
-        guard let t = texts, !t.languages.isEmpty else { return }
-        xwbLang = code
-        applyXactTexts(t.url)
+        textLang = code
+        applyNamedTexts()
     }
 
     /// Textes d'une autre édition du jeu (autre langue) : son fichier de scripts, à garder pour ce fichier de voix.
@@ -208,7 +229,7 @@ final class Store: ObservableObject {
         loadTexts(u, for: b, report: true)
     }
 
-    static let extensions = ["sou", "so3", "sog", "sof", "xwb"]
+    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun"]
 
     static func findBank(in dir: URL) -> URL? {
         guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return nil }
@@ -219,7 +240,8 @@ final class Store: ObservableObject {
         }
         // MONSTER.* (versions CD), puis Speech.xwb (éditions spéciales), sinon le premier fichier trouvé
         let stem = { (u: URL) in u.deletingPathExtension().lastPathComponent.uppercased() }
-        return candidates.first { stem($0) == "MONSTER" } ?? candidates.first { stem($0) == "SPEECH" } ?? candidates.first
+        return candidates.first { stem($0) == "MONSTER" } ?? candidates.first { stem($0) == "SPEECH" }
+            ?? candidates.first { stem($0).contains("VOICE") || stem($0).hasPrefix("VOX") } ?? candidates.first
     }
 
     private func addRecent(_ url: URL) {
@@ -268,7 +290,7 @@ final class Store: ObservableObject {
 
     /// Forme d'onde d'une ligne, calculée à la demande (VOC : immédiat ; compressé : rempli par le décodage de fond).
     func requestPeaks(_ id: Line.ID) {
-        guard peaks[id] == nil, let b = bank, b.codec == .voc || b.codec == .xwb, let line = lines.first(where: { $0.id == id }) else { return }
+        guard peaks[id] == nil, let b = bank, b.codec == .voc || b.codec == .xwb || b.codec == .bun, let line = lines.first(where: { $0.id == id }) else { return }
         if let pcm = try? b.decode(line) { peaks[id] = Peaks.compute(pcm, count: 64) } else { peaks[id] = [] }
     }
 
