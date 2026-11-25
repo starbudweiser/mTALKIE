@@ -30,6 +30,7 @@
 				<string>osa</string>
 				<string>1c</string>
 				<string>ttarch</string>
+				<string>vcc</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>Adventure game speech file</string>

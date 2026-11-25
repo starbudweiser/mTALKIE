@@ -161,7 +161,7 @@ final class Store: ObservableObject {
         hasNames = b.lines.contains { !$0.name.isEmpty }
         addRecent(b.url)
         if b.lines.contains(where: { $0.rate == 0 }) { completeDurations(b) }
-        if b.codec == .xwb || b.codec == .bun || b.codec == .aud || b.codec == .lab || b.codec == .gg || b.codec == .sword1 || b.codec == .aufs || b.codec == .queen || b.codec == .telltale { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
+        if b.codec == .xwb || b.codec == .bun || b.codec == .aud || b.codec == .lab || b.codec == .gg || b.codec == .sword1 || b.codec == .aufs || b.codec == .queen || b.codec == .telltale || b.codec == .trek { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
         let chosen = textsChoice[b.url.path].map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
@@ -223,6 +223,11 @@ final class Store: ObservableObject {
                 var t: [Int: String] = [:]
                 for l in lines { if let x = dict[l.name.lowercased()] { t[l.offset] = x } }
                 if !t.isEmpty { url = b.url.deletingLastPathComponent().appendingPathComponent("artAll.m4b"); sets = [(Grime.detect(dict), t)] }
+            } else if b.codec == .trek, case let dict = Trek.texts(near: b.url), !dict.isEmpty {
+                url = Trek.episodesDir(near: b.url) ?? b.url
+                var t: [Int: String] = [:]
+                for l in lines { if let x = dict[l.name] { t[l.offset] = x } }
+                sets = t.isEmpty ? [] : [("en", t)]
             } else if b.codec == .telltale, case let found = Telltale.texts(near: b.url), !found.isEmpty {
                 url = b.url
                 sets = found.map { lang, dict in
@@ -311,14 +316,14 @@ final class Store: ObservableObject {
         loadTexts(u, for: b, report: true)
     }
 
-    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3", "osa", "1c", "ttarch"]
+    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3", "osa", "1c", "ttarch", "vcc"]
 
     static func findBank(in dir: URL) -> URL? {
         guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return nil }
         var candidates: [URL] = []
         for case let u as URL in e {
             if e.level > 3 { e.skipDescendants(); continue }
-            if extensions.contains(u.pathExtension.lowercased()) || Aufs.isSpeech(u) { candidates.append(u) }
+            if extensions.contains(u.pathExtension.lowercased()) || Aufs.isSpeech(u) || Trek.looksLikeImage(u) { candidates.append(u) }
         }
         // MONSTER.* (versions CD), puis Speech.xwb (éditions spéciales), sinon le premier fichier trouvé
         let stem = { (u: URL) in u.deletingPathExtension().lastPathComponent.uppercased() }
@@ -326,7 +331,7 @@ final class Store: ObservableObject {
             { stem($0) == "MONSTER" }, { stem($0) == "SPEECH" }, { stem($0) == "VOICEALL" },
             { stem($0).contains("VOICE") || stem($0).hasPrefix("VOX") },
             { $0.pathExtension.lowercased() == "ggpack2" }, { stem($0) == "SPEECH1" },
-            { stem($0) == "ENGLISH" && Aufs.isSpeech($0) }, { Queen.isQueen($0) }, { stem($0).hasSuffix("_VOICE") }, { stem($0) == "SPEECH_ENGLISH" },
+            { stem($0) == "ENGLISH" && Aufs.isSpeech($0) }, { Queen.isQueen($0) }, { stem($0).hasSuffix("_VOICE") }, { stem($0) == "STJR1" }, { stem($0) == "SPEECH_ENGLISH" },
             { $0.lastPathComponent.lowercased() != "sfx.osa" },
         ]
         for rule in rules { if let u = candidates.first(where: rule) { return u } }

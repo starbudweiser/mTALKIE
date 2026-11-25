@@ -368,6 +368,22 @@ do {
     check(t[42]?.speaker == "GUYBRUSH" && t[42]?.text == "Ahoy al", "base de langue (personnage, texte, indications retirées)")
 }
 
+// MARK: 3 sexies octies. Star Trek: Judgment Rites (ACMP, .VCC)
+print("3 sexies octies. Star Trek: Judgment Rites")
+do {
+    // un son ACMP : 3 échantillons, un bloc « constante » (en-tête 0x00, valeur 0x90)
+    let acmp = AcmpDecoder.magic + [0x22, 0x56, 0, 0, 0, 0] + [3, 0, 0, 0] + [0x00, 0x90]
+    var dec = AcmpDecoder(acmp)
+    check(AcmpDecoder.isAcmp(acmp) && AcmpDecoder.rate(acmp) == 22050 && dec.decode() == [0x90, 0x90, 0x90], "ACMP : en-tête et bloc constant")
+    func le(_ v: Int) -> [UInt8] { [UInt8(v & 255), UInt8((v >> 8) & 255), UInt8((v >> 16) & 255), UInt8(v >> 24)] }
+    let vcc = Array("VOCFILES".utf8) + le(16 + acmp.count) + le(1) + acmp + Array("MUS-2".utf8) + [0, 0, 0] + le(16) + le(acmp.count)
+    let lines = try Trek.parse(Data(vcc), url: URL(fileURLWithPath: "/x/SCOTTY.VCC"))
+    check(lines.count == 1 && lines[0].name == "MUS-2" && lines[0].start == 16, "sommaire .VCC")
+    var t: [String: String] = [:]
+    Trek.scan(Array("..#MUS-2#About twenty-three hours, sir.\u{0}#X#no\u{0}".utf8), into: &t)
+    check(t == ["MUS-2": "About twenty-three hours, sir."], "textes « #NOM#texte »")
+} catch { check(false, "Star Trek : \(error)") }
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

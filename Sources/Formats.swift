@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale, trek }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -58,7 +58,9 @@ final class SoundBank: @unchecked Sendable {
         self.url = url
         guard let d = try? Data(contentsOf: url, options: .alwaysMapped) else { throw FormatError.unreadable }
         data = d
-        switch Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
+        let trek = Trek.looksLikeImage(url) || Trek.isVcc(url)
+        switch trek ? "trek" : Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
+        case "trek": codec = .trek
         case "aufs": codec = .aufs
         case "queen": codec = .queen
         case "ttarch": codec = .telltale
@@ -82,6 +84,7 @@ final class SoundBank: @unchecked Sendable {
         case .gg: lines = try GGPack.parse(data)
         case .sword1: lines = try Sword1.parse(data)
         case .aufs: lines = try Aufs.parse(data, url: url)
+        case .trek: lines = try Trek.parse(data, url: url)
         case .telltale: let r = try Telltale.parse(data, url: url); lines = r.lines; ttarch = r.archive
         case .queen: lines = try Queen.parse(data); queenCompression = (try? Queen.table(data).compression) ?? 2
         default: try parseCompressed()
@@ -227,6 +230,8 @@ final class SoundBank: @unchecked Sendable {
             return try Aufs.decode(data, line: line)
         case .queen:
             return try Queen.decode(data, line: line, compression: queenCompression)
+        case .trek:
+            return try Trek.decode(data, line: line)
         case .telltale:
             guard let a = ttarch else { throw FormatError.unsupportedCodec }
             return try Telltale.decode(a, line: line)
@@ -253,7 +258,8 @@ final class SoundBank: @unchecked Sendable {
                       "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE",
                       "Thimbleweed Park": "TWP", "Broken Sword: The Shadow of the Templars": "BS1",
                       "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R",
-                      "Flight of the Amazon Queen": "FOTAQ", "Tales of Monkey Island": "TMI"]
+                      "Flight of the Amazon Queen": "FOTAQ", "Tales of Monkey Island": "TMI",
+                      "Star Trek: Judgment Rites": "ST JR"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -267,6 +273,7 @@ final class SoundBank: @unchecked Sendable {
         if GGPack.isPack(url) { return "Thimbleweed Park" }
         if Sword1.isSpeech(url) { return "Broken Sword: The Shadow of the Templars" }
         if Queen.isQueen(url) { return "Flight of the Amazon Queen" }
+        if Trek.looksLikeImage(url) || Trek.isVcc(url) { return "Star Trek: Judgment Rites" }
         if Telltale.isArchive(url) { return Telltale.episode(url).map { "Tales of Monkey Island \($0)" } ?? "Tales of Monkey Island" }
         if Aufs.isSpeech(url) { return Aufs.isReforged(url) ? "Broken Sword: Shadow of the Templars – Reforged" : "Broken Sword 2: Remastered" }
         if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }
