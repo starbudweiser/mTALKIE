@@ -384,6 +384,25 @@ do {
     check(t == ["MUS-2": "About twenty-three hours, sir."], "textes « #NOM#texte »")
 } catch { check(false, "Star Trek : \(error)") }
 
+// MARK: 3 sexies nonies. Leisure Suit Larry (Unity, FSB5 Vorbis)
+print("3 sexies nonies. Leisure Suit Larry (Unity)")
+do {
+    func le(_ v: Int) -> [UInt8] { [UInt8(v & 255), UInt8((v >> 8) & 255), UInt8((v >> 16) & 255), UInt8(v >> 24)] }
+    // FSB5 : un son Vorbis 48 kHz mono, bloc VORBISDATA (type 11) avec un CRC connu, deux paquets (court puis long)
+    let crc = 1_804_123_474
+    let sample = le(1 | 9 << 1) + le(0) + le(11 << 25 | 4 << 1) + le(crc)        // champs + bloc supplémentaire
+    let data = le(2)[0 ..< 2] + [0x00, 0xAA] + le(2)[0 ..< 2] + [0x02, 0xBB]
+    var fsb = Array("FSB5".utf8) + le(1) + le(1) + le(sample.count) + le(0) + le(data.count) + le(15)
+    fsb += [UInt8](repeating: 0, count: 0x3C - fsb.count) + sample + Array(data)
+    let ogg = Unity.oggFromFsb(fsb) ?? []
+    let pages = stride(from: 0, to: max(0, ogg.count - 3), by: 1).filter { ogg[$0] == 0x4F && ogg[$0 + 1] == 0x67 && ogg[$0 + 2] == 0x67 && ogg[$0 + 3] == 0x53 }
+    check(pages.count == 4 && ogg[5] == 2 && ogg[pages[3] + 5] == 4, "FSB5 → Ogg : en-têtes reconstitués, 4 pages (début et fin marqués)")
+    let db: [UInt8] = le(5) + Array("dg_Ab".utf8) + [0, 0, 0] + le(36) + Array("e0297cea-afcc-490b-830e-ffe020c3251d".utf8)
+    let sub: [UInt8] = le(36) + Array("e0297cea-afcc-490b-830e-ffe020c3251d".utf8) + le(5) + Array("Hello".utf8) + [0, 0, 0]
+    check(Unity.guids(db) == ["dg_Ab": "e0297cea-afcc-490b-830e-ffe020c3251d"] && Unity.subtitles(sub)["e0297cea-afcc-490b-830e-ffe020c3251d"] == "Hello", "base et sous-titres")
+    check(Unity.clipName(Unity.speakerName("hs_Door_Look_L10")) == "hs_Door_Look_L10" && CastingLink.prefix(Unity.speakerName("hs_Door_Look_L10")) == "larry", "personnage des remarques")
+}
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

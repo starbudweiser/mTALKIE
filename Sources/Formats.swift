@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale, trek }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale, trek, unity }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -51,7 +51,8 @@ final class SoundBank: @unchecked Sendable {
     private(set) var lines: [Line] = []
     private var xact: [Xact.Entry] = []
     private var queenCompression = 2
-    private var ttarch: Telltale.Archive?   // Tales of Monkey Island : archive déchiffrée        // queen.1c : 1 MP3, 2 Ogg Vorbis, 3 FLAC     // .xwb : format de chaque son, dans l'ordre des répliques
+    private var ttarch: Telltale.Archive?
+    private var unityBundle: Unity.Bundle?  // Larry (Unity) : archive des voix   // Tales of Monkey Island : archive déchiffrée        // queen.1c : 1 MP3, 2 Ogg Vorbis, 3 FLAC     // .xwb : format de chaque son, dans l'ordre des répliques
 
     init(url requested: URL) throws {
         let url = GGPack.isPack(requested) ? GGPack.voicePack(for: requested) : requested     // Thimbleweed Park : voix dans ggpack2
@@ -59,8 +60,9 @@ final class SoundBank: @unchecked Sendable {
         guard let d = try? Data(contentsOf: url, options: .alwaysMapped) else { throw FormatError.unreadable }
         data = d
         let trek = Trek.looksLikeImage(url) || Trek.isVcc(url)
-        switch trek ? "trek" : Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
+        switch Unity.isVoiceBundle(url) ? "unity" : trek ? "trek" : Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
         case "trek": codec = .trek
+        case "unity": codec = .unity
         case "aufs": codec = .aufs
         case "queen": codec = .queen
         case "ttarch": codec = .telltale
@@ -85,6 +87,7 @@ final class SoundBank: @unchecked Sendable {
         case .sword1: lines = try Sword1.parse(data)
         case .aufs: lines = try Aufs.parse(data, url: url)
         case .trek: lines = try Trek.parse(data, url: url)
+        case .unity: let r = try Unity.parse(data); lines = r.lines; unityBundle = r.bundle
         case .telltale: let r = try Telltale.parse(data, url: url); lines = r.lines; ttarch = r.archive
         case .queen: lines = try Queen.parse(data); queenCompression = (try? Queen.table(data).compression) ?? 2
         default: try parseCompressed()
@@ -232,6 +235,9 @@ final class SoundBank: @unchecked Sendable {
             return try Queen.decode(data, line: line, compression: queenCompression)
         case .trek:
             return try Trek.decode(data, line: line)
+        case .unity:
+            guard let b = unityBundle else { throw FormatError.unsupportedCodec }
+            return try Unity.decode(b, line: line)
         case .telltale:
             guard let a = ttarch else { throw FormatError.unsupportedCodec }
             return try Telltale.decode(a, line: line)
@@ -259,7 +265,8 @@ final class SoundBank: @unchecked Sendable {
                       "Thimbleweed Park": "TWP", "Broken Sword: The Shadow of the Templars": "BS1",
                       "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R",
                       "Flight of the Amazon Queen": "FOTAQ", "Tales of Monkey Island": "TMI",
-                      "Star Trek: Judgment Rites": "ST JR"]
+                      "Star Trek: Judgment Rites": "ST JR",
+                      "Leisure Suit Larry – Wet Dreams Don't Dry": "LSL WDDD", "Leisure Suit Larry – Wet Dreams Dry Twice": "LSL WDDT"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -274,6 +281,9 @@ final class SoundBank: @unchecked Sendable {
         if Sword1.isSpeech(url) { return "Broken Sword: The Shadow of the Templars" }
         if Queen.isQueen(url) { return "Flight of the Amazon Queen" }
         if Trek.looksLikeImage(url) || Trek.isVcc(url) { return "Star Trek: Judgment Rites" }
+        if Unity.isVoiceBundle(url) {
+            return url.path.lowercased().contains("dry twice") ? "Leisure Suit Larry – Wet Dreams Dry Twice" : "Leisure Suit Larry – Wet Dreams Don't Dry"
+        }
         if Telltale.isArchive(url) { return Telltale.episode(url).map { "Tales of Monkey Island \($0)" } ?? "Tales of Monkey Island" }
         if Aufs.isSpeech(url) { return Aufs.isReforged(url) ? "Broken Sword: Shadow of the Templars – Reforged" : "Broken Sword 2: Remastered" }
         if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }

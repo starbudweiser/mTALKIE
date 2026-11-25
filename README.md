@@ -1,7 +1,7 @@
 # mTALKIE
 
 Extract, play and export the voice lines of classic adventure games on macOS: LucasArts (SCUMM, iMUSE, GrimE),
-Sierra, Revolution, Interplay, Interactive Binary Illusions, Telltale and Terrible Toybox.
+Sierra, Revolution, Interplay, Interactive Binary Illusions, Telltale, CrazyBunch and Terrible Toybox.
 
 ## About
 
@@ -22,6 +22,7 @@ mTALKIE opens the speech files of these games (drop the file, or simply the game
 | Flight of the Amazon Queen (CD, compressed by the ScummVM tools) | `queen.1c` |
 | Tales of Monkey Island (episodes 1 to 5) | `Pack/2_MonkeyIsland10x_pc_voice.ttarch` |
 | Star Trek: Judgment Rites (CD) | the CD image `STJR1.dat` (GOG) or the `.VCC` files of the CD |
+| Leisure Suit Larry – Wet Dreams Don't Dry, Wet Dreams Dry Twice | the game itself, or `StreamingAssets/localisation/englishvo` (`germanvo`) |
 
 It lists every line with its spoken text, length and
 waveform, plays it, and exports all lines or a selection as WAV, AIFF or FLAC. Native
@@ -30,7 +31,7 @@ Swift, no ffmpeg or other dependency. Original files are never modified.
 - Authors: Starbudweiser & Claude Code (Anthropic)
 - License: MIT, © 2026 Starbudweiser
 - Provided as is, without warranty. Use it with your own copies of the games.
-- Not affiliated with LucasArts, Lucasfilm Games, Sierra, Revolution Software, Interplay, Interactive Binary Illusions, Telltale Games, Terrible Toybox or the ScummVM project.
+- Not affiliated with LucasArts, Lucasfilm Games, Sierra, Revolution Software, Interplay, Interactive Binary Illusions, Telltale Games, CrazyBunch, Assemble Entertainment, Terrible Toybox or the ScummVM project.
 - Part of the DESKTOP MAC TOOLKIT. See the app's **mTALKIE › About mTALKIE** menu.
 
 ## Features
@@ -42,7 +43,7 @@ Swift, no ffmpeg or other dependency. Original files are never modified.
   `speech.info` in English, French, Italian, German or Spanish; line names from `SpeechCues.xsb`. The Dig: English text
   from `DIG.LA1` and the translation from `LANGUAGE.BND`. The Curse of Monkey Island: English text from `COMI.LA1` / `COMI.LA2` and
   the translation from `LANGUAGE.TAB`. Thimbleweed Park: text in English, French, German, Spanish, Italian and Russian from
-  `ThimbleweedPark.ggpack1`. Broken Sword: text in English, French, German, Italian, Spanish and Czech from `clusters/text.clu`; Reforged: the same six languages from `text.vt7a`. Broken Sword 2 Remastered: voices only for now. Flight of the Amazon Queen: text of the dialogues, cutscenes and Joe's remarks from `queen.1c`, in the language of the version. Tales of Monkey Island: text in English (and German) with the character of each line, from the episode's `_data.ttarch`. Star Trek: Judgment Rites: English text from the episode files in `TREK2`. Sierra: text from the game's message resources, lines named
+  `ThimbleweedPark.ggpack1`. Broken Sword: text in English, French, German, Italian, Spanish and Czech from `clusters/text.clu`; Reforged: the same six languages from `text.vt7a`. Broken Sword 2 Remastered: voices only for now. Flight of the Amazon Queen: text of the dialogues, cutscenes and Joe's remarks from `queen.1c`, in the language of the version. Tales of Monkey Island: text in English (and German) with the character of each line, from the episode's `_data.ttarch`. Star Trek: Judgment Rites: English text from the episode files in `TREK2`. Leisure Suit Larry (CrazyBunch): English or German voices, text in up to 8 languages from the game's `databases` and `localisation` bundles. Sierra: text from the game's message resources, lines named
   room_noun_verb_condition_sequence from its audio maps. Escape from Monkey Island: VIMA voices, text from `script.tab`
   (in `artAll.m4b`).
 - Play with a double-click or Space; drag a line to the Finder to get a WAV.
@@ -83,5 +84,5 @@ texte de chaque réplique : jeux LucasArts en CD (Indiana Jones and the Fate of 
 `MONSTER.SOU`…), éditions spéciales de Monkey Island (`Speech.xwb`), The Dig (`DIGVOICE.BUN`), The Curse of Monkey Island
 (`VOXDISK1.BUN`, `VOXDISK2.BUN`), Escape from Monkey Island (`voiceAll.m4b`), jeux Sierra en CD comme Space Quest 6
 (`RESOURCE.AUD`), Broken Sword (version ScummVM `speech1.clv`, Reforged `english.osa`, Broken Sword 2 Remastered
-`Speech_english.dat`), Thimbleweed Park (`ThimbleweedPark.ggpack2`) Flight of the Amazon Queen (`queen.1c`) Tales of Monkey Island (`2_MonkeyIsland101_pc_voice.ttarch`…) et Star Trek: Judgment Rites (image du CD `STJR1.dat` ou fichiers `.VCC`). Il suffit de glisser le fichier, le jeu ou son dossier.
+`Speech_english.dat`), Thimbleweed Park (`ThimbleweedPark.ggpack2`) Flight of the Amazon Queen (`queen.1c`) Tales of Monkey Island (`2_MonkeyIsland101_pc_voice.ttarch`…) Star Trek: Judgment Rites (image du CD `STJR1.dat` ou fichiers `.VCC`) et les deux Leisure Suit Larry de CrazyBunch (Wet Dreams Don't Dry, Wet Dreams Dry Twice : voix anglaises et allemandes, textes en 8 langues). Il suffit de glisser le fichier, le jeu ou son dossier.
 Aucun fichier d'origine n'est modifié. Fait partie du DESKTOP MAC TOOLKIT.

@@ -161,7 +161,7 @@ final class Store: ObservableObject {
         hasNames = b.lines.contains { !$0.name.isEmpty }
         addRecent(b.url)
         if b.lines.contains(where: { $0.rate == 0 }) { completeDurations(b) }
-        if b.codec == .xwb || b.codec == .bun || b.codec == .aud || b.codec == .lab || b.codec == .gg || b.codec == .sword1 || b.codec == .aufs || b.codec == .queen || b.codec == .telltale || b.codec == .trek { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
+        if b.codec == .xwb || b.codec == .bun || b.codec == .aud || b.codec == .lab || b.codec == .gg || b.codec == .sword1 || b.codec == .aufs || b.codec == .queen || b.codec == .telltale || b.codec == .trek || b.codec == .unity { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
         let chosen = textsChoice[b.url.path].map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
@@ -223,6 +223,13 @@ final class Store: ObservableObject {
                 var t: [Int: String] = [:]
                 for l in lines { if let x = dict[l.name.lowercased()] { t[l.offset] = x } }
                 if !t.isEmpty { url = b.url.deletingLastPathComponent().appendingPathComponent("artAll.m4b"); sets = [(Grime.detect(dict), t)] }
+            } else if b.codec == .unity, case let found = Unity.textSets(near: b.url), !found.isEmpty {
+                url = b.url.deletingLastPathComponent()
+                sets = found.map { lang, dict in
+                    var t: [Int: String] = [:]
+                    for l in lines { if let x = dict[Unity.clipName(l.name)] { t[l.offset] = x } }
+                    return (lang, t)
+                }.filter { !$0.1.isEmpty }
             } else if b.codec == .trek, case let dict = Trek.texts(near: b.url), !dict.isEmpty {
                 url = Trek.episodesDir(near: b.url) ?? b.url
                 var t: [Int: String] = [:]
@@ -319,6 +326,11 @@ final class Store: ObservableObject {
     static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3", "osa", "1c", "ttarch", "vcc"]
 
     static func findBank(in dir: URL) -> URL? {
+        // Jeux Unity (Larry) : les voix sont loin dans l'appli, StreamingAssets/localisation/englishvo.
+        for base in [dir.appendingPathComponent("Contents/Resources/Data/StreamingAssets/localisation"), dir.appendingPathComponent("localisation"), dir] {
+            let vo = base.appendingPathComponent("englishvo")
+            if FileManager.default.fileExists(atPath: vo.path), Unity.isVoiceBundle(vo) { return vo }
+        }
         guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return nil }
         var candidates: [URL] = []
         for case let u as URL in e {
