@@ -354,6 +354,20 @@ do {
     check(CastingLink.prefix("JOE_020006J1") == "joe" && CastingLink.knownSpeakers["joe"] == "Joe King", "personnages")
 }
 
+// MARK: 3 sexies septies. Tales of Monkey Island (.ttarch)
+print("3 sexies septies. Tales of Monkey Island")
+do {
+    // vecteur de test officiel de Blowfish : clé nulle, bloc nul → 4EF99745 6198DD78
+    var b: [UInt8] = [0x45, 0x97, 0xF9, 0x4E, 0x78, 0xDD, 0x98, 0x61]
+    TelltaleBlowfish(key: [UInt8](repeating: 0, count: 8), modified: false).decrypt(&b)
+    check(b == [UInt8](repeating: 0, count: 8), "Blowfish (vecteur de test)")
+    check(Telltale.key(episode: 3)[14] == 0x86 && Telltale.episode(URL(fileURLWithPath: "/x/2_MonkeyIsland104_pc_voice.ttarch")) == 4, "clés et épisodes")
+    func le(_ v: Int) -> [UInt8] { [UInt8(v & 255), UInt8((v >> 8) & 255), UInt8((v >> 16) & 255), UInt8(v >> 24)] }
+    let db = [9, 9] + le(42) + le(42) + le(16) + le(8) + Array("GUYBRUSH".utf8) + le(20) + le(12) + Array("{sad}Ahoy all".utf8).prefix(12) + [0, 0]
+    let t = Telltale.langdb(db)
+    check(t[42]?.speaker == "GUYBRUSH" && t[42]?.text == "Ahoy al", "base de langue (personnage, texte, indications retirées)")
+}
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

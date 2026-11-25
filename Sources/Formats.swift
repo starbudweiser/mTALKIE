@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -50,7 +50,8 @@ final class SoundBank: @unchecked Sendable {
     let codec: Codec
     private(set) var lines: [Line] = []
     private var xact: [Xact.Entry] = []
-    private var queenCompression = 2        // queen.1c : 1 MP3, 2 Ogg Vorbis, 3 FLAC     // .xwb : format de chaque son, dans l'ordre des répliques
+    private var queenCompression = 2
+    private var ttarch: Telltale.Archive?   // Tales of Monkey Island : archive déchiffrée        // queen.1c : 1 MP3, 2 Ogg Vorbis, 3 FLAC     // .xwb : format de chaque son, dans l'ordre des répliques
 
     init(url requested: URL) throws {
         let url = GGPack.isPack(requested) ? GGPack.voicePack(for: requested) : requested     // Thimbleweed Park : voix dans ggpack2
@@ -60,6 +61,7 @@ final class SoundBank: @unchecked Sendable {
         switch Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
         case "aufs": codec = .aufs
         case "queen": codec = .queen
+        case "ttarch": codec = .telltale
         case "so3": codec = .mp3
         case "sog": codec = .ogg
         case "sof": codec = .flac
@@ -80,6 +82,7 @@ final class SoundBank: @unchecked Sendable {
         case .gg: lines = try GGPack.parse(data)
         case .sword1: lines = try Sword1.parse(data)
         case .aufs: lines = try Aufs.parse(data, url: url)
+        case .telltale: let r = try Telltale.parse(data, url: url); lines = r.lines; ttarch = r.archive
         case .queen: lines = try Queen.parse(data); queenCompression = (try? Queen.table(data).compression) ?? 2
         default: try parseCompressed()
         }
@@ -224,6 +227,9 @@ final class SoundBank: @unchecked Sendable {
             return try Aufs.decode(data, line: line)
         case .queen:
             return try Queen.decode(data, line: line, compression: queenCompression)
+        case .telltale:
+            guard let a = ttarch else { throw FormatError.unsupportedCodec }
+            return try Telltale.decode(a, line: line)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -247,7 +253,7 @@ final class SoundBank: @unchecked Sendable {
                       "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE",
                       "Thimbleweed Park": "TWP", "Broken Sword: The Shadow of the Templars": "BS1",
                       "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R",
-                      "Flight of the Amazon Queen": "FOTAQ"]
+                      "Flight of the Amazon Queen": "FOTAQ", "Tales of Monkey Island": "TMI"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -261,6 +267,7 @@ final class SoundBank: @unchecked Sendable {
         if GGPack.isPack(url) { return "Thimbleweed Park" }
         if Sword1.isSpeech(url) { return "Broken Sword: The Shadow of the Templars" }
         if Queen.isQueen(url) { return "Flight of the Amazon Queen" }
+        if Telltale.isArchive(url) { return Telltale.episode(url).map { "Tales of Monkey Island \($0)" } ?? "Tales of Monkey Island" }
         if Aufs.isSpeech(url) { return Aufs.isReforged(url) ? "Broken Sword: Shadow of the Templars – Reforged" : "Broken Sword 2: Remastered" }
         if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }
         if url.pathExtension.lowercased() == "xwb" {
