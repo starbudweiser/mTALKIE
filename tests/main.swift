@@ -342,6 +342,9 @@ do {
     var t: [UInt8] = Array("TEXT".utf8) + [0, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 20, 0, 0, 0] + Array("Hello\u{0}".utf8)
     t[8] = 1
     check(Aufs.texts(t) == [5: "Hello"], "textes TEXT")
+    var c: [UInt8] = [56, 0, 0, 0, 0, 0, 0, 0] + Array("lText Resource 1".utf8) + [UInt8](repeating: 0, count: 16)
+    c += [1, 0, 0, 0, 21, 0, 0, 0, 0x31, 0x0C] + [0x48, 0, 0x69, 0, 0, 0] + [8, 0, 0, 0, 48, 0, 0, 0]
+    check(Aufs.remasteredTexts(Data(c)) == [0x0C31: "Hi"], "textes BS2 Remastered (numéro de voix)")
 } catch { check(false, "AUFS : \(error)") }
 
 // MARK: 3 sexies sexies. Flight of the Amazon Queen (queen.1c)

@@ -3,7 +3,9 @@
 // position et taille (LE32) ; chaque son est un flux Ogg Opus.
 // Reforged : le numéro est celui du texte de Broken Sword 1 (section × 65536 + n) ; textes dans text.vt7a
 // (archive « VT7A » : une entrée zlib par langue, chacune « TEXT » + (numéro, position) + chaînes UTF-8).
-// Broken Sword 2 Remastered : le lien entre voix et textes passe par les scripts du jeu (pas encore lu).
+// Broken Sword 2 Remastered : textes dans Text/Text_<langue>.clu (position du sommaire en tête, puis par ressource
+// position et taille) ; une ressource = nom sur 32, nombre de lignes, positions (en mots de 16 bits), puis un numéro
+// LE16 par ligne : celui de la voix dans Speech_<langue>.dat ; chaînes UTF-16 LE terminées par un zéro.
 import Foundation
 import Compression
 import NaturalLanguage
@@ -56,7 +58,7 @@ enum Aufs {
     }
 
     static func textSets(near url: URL) -> (url: URL, sets: [(String, [Int: String])])? {
-        guard isReforged(url) else { return nil }
+        guard isReforged(url) else { return remasteredTextSets(near: url) }
         let dir = url.deletingLastPathComponent()
         guard let name = (try? FileManager.default.contentsOfDirectory(atPath: dir.path))?.first(where: { $0.lowercased() == "text.vt7a" }),
               let d = try? Data(contentsOf: dir.appendingPathComponent(name), options: .alwaysMapped),
@@ -79,6 +81,50 @@ enum Aufs {
         if let lang = voiceLanguage(url), let k = sets.firstIndex(where: { $0.0 == lang }) { sets.insert(sets.remove(at: k), at: 0) }
         guard !sets.isEmpty else { return nil }
         return (dir.appendingPathComponent(name), sets)
+    }
+
+    /// BS2 Remastered : Text/Text_<langue>.clu à côté du dossier Audio.
+    static func remasteredTextSets(near url: URL) -> (url: URL, sets: [(String, [Int: String])])? {
+        let dir = url.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Text")
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return nil }
+        let langs = [("english", "en"), ("french", "fr"), ("german", "de"), ("italian", "it"), ("spanish", "es"), ("russian", "ru"), ("brazilian", "pt")]
+        var sets: [(String, [Int: String])] = []
+        for (name, code) in langs {
+            guard let f = items.first(where: { $0.lowercased() == "text_\(name).clu" }),
+                  let d = try? Data(contentsOf: dir.appendingPathComponent(f), options: .alwaysMapped) else { continue }
+            let t = remasteredTexts(d)
+            if !t.isEmpty { sets.append((code, t)) }
+        }
+        if let lang = voiceLanguage(url), let k = sets.firstIndex(where: { $0.0 == lang }) { sets.insert(sets.remove(at: k), at: 0) }
+        guard !sets.isEmpty else { return nil }
+        return (dir, sets)
+    }
+
+    /// Numéro de voix → texte, pour un fichier Text_<langue>.clu.
+    static func remasteredTexts(_ d: Data) -> [Int: String] {
+        guard d.count > 16 else { return [:] }
+        func u16(_ p: Int) -> Int { Int(d[d.startIndex + p]) | Int(d[d.startIndex + p + 1]) << 8 }
+        let index = le32(d, 0)
+        guard index > 8, index < d.count else { return [:] }
+        var out: [Int: String] = [:]
+        for k in 0 ..< (d.count - index) / 8 {
+            let off = le32(d, index + k * 8), size = le32(d, index + k * 8 + 4)
+            guard size > 36, off + size <= d.count else { continue }
+            let n = le32(d, off + 32)
+            guard n > 0, 36 + n * 6 <= size else { continue }
+            for i in 0 ..< n {
+                let id = u16(off + 36 + n * 4 + i * 2)
+                guard id != 0, out[id] == nil else { continue }
+                let p = off + le32(d, off + 36 + i * 4) * 2
+                guard p >= off, p < off + size else { continue }
+                var e = p
+                while e + 1 < off + size, d[d.startIndex + e] != 0 || d[d.startIndex + e + 1] != 0 { e += 2 }
+                guard let s = String(bytes: d[(d.startIndex + p) ..< (d.startIndex + e)], encoding: .utf16LittleEndian) else { continue }
+                let clean = s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+                if !clean.isEmpty { out[id] = clean }
+            }
+        }
+        return out
     }
 
     /// Flux deflate brut (sans les 2 octets d'en-tête zlib).
