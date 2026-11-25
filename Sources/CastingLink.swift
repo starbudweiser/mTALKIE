@@ -41,6 +41,7 @@ enum CastingLink {
         "guy": "Guybrush", "lch": "LeChuck", "lec": "LeChuck", "ela": "Elaine", "el1": "Elaine", "wal": "Wally", "mur": "Murray",
         "stn": "Stan", "sta": "Stan", "lrg": "Largo", "oti": "Otis", "car": "Carla", "mea": "Meathook", "kat": "Kate Capsize",
         "rum": "Rum Rogers", "ozz": "Ozzie Mandrill", "cha": "Charles L. Charles",
+        "ray": "Agent Ray", "reyes": "Agent Reyes", "delores": "Delores", "ransome": "Ransome", "franklin": "Franklin",
         "gt": "Guybrush", "lc": "LeChuck", "mr": "Murray", "wy": "Wally", "kn": "Kenny Falmouth", "hm": "Haggis McMutton",
     ]
     /// Noms donnés par l'utilisateur, par jeu (préfixe → personnage), retenus d'un envoi à l'autre.

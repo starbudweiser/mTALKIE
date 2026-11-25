@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -51,7 +51,8 @@ final class SoundBank: @unchecked Sendable {
     private(set) var lines: [Line] = []
     private var xact: [Xact.Entry] = []     // .xwb : format de chaque son, dans l'ordre des répliques
 
-    init(url: URL) throws {
+    init(url requested: URL) throws {
+        let url = GGPack.isPack(requested) ? GGPack.voicePack(for: requested) : requested     // Thimbleweed Park : voix dans ggpack2
         self.url = url
         guard let d = try? Data(contentsOf: url, options: .alwaysMapped) else { throw FormatError.unreadable }
         data = d
@@ -63,6 +64,7 @@ final class SoundBank: @unchecked Sendable {
         case "bun": codec = .bun
         case "aud": codec = .aud
         case "m4b": codec = .lab
+        case let e where e.hasPrefix("ggpack"): codec = .gg
         default: codec = .voc
         }
         switch codec {
@@ -71,6 +73,7 @@ final class SoundBank: @unchecked Sendable {
         case .bun: lines = try BunArchive.parse(data)
         case .aud: lines = try Sierra.parse(data, url: url)
         case .lab: lines = try Grime.parse(data)
+        case .gg: lines = try GGPack.parse(data)
         default: try parseCompressed()
         }
         guard !lines.isEmpty else { throw FormatError.empty }
@@ -206,6 +209,8 @@ final class SoundBank: @unchecked Sendable {
             return try Sierra.decode(data, line: line)
         case .lab:
             return try Grime.decode(data, line: line)
+        case .gg:
+            return try GGPack.decode(data, line: line)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -226,7 +231,8 @@ final class SoundBank: @unchecked Sendable {
         let shorts = ["Indiana Jones and the Fate of Atlantis": "Indy 4", "Day of the Tentacle": "DOTT", "Sam & Max Hit the Road": "Sam & Max",
                       "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom",
                       "The Dig": "The Dig", "Full Throttle": "Full Throttle", "The Curse of Monkey Island": "MI3",
-                      "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE"]
+                      "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE",
+                      "Thimbleweed Park": "TWP"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -237,6 +243,7 @@ final class SoundBank: @unchecked Sendable {
         // Éditions spéciales : la banque de sons est dans « audio », le jeu (monkey2.pak) dans le dossier parent.
         let parent = Set(((try? FileManager.default.contentsOfDirectory(atPath: dir.deletingLastPathComponent().path)) ?? []).map { $0.uppercased() })
         if url.pathExtension.lowercased() == "aud", let n = Sierra.gameName(dir: dir) { return n }
+        if GGPack.isPack(url) { return "Thimbleweed Park" }
         if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }
         if url.pathExtension.lowercased() == "xwb" {
             if parent.contains("MONKEY2.PAK") || names.contains("MONKEY2.PAK") { return "Monkey Island 2: Special Edition" }

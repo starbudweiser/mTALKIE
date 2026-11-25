@@ -300,6 +300,23 @@ do {
     check(BunArchive.imcBits[0] == 2 && BunArchive.imcBits[88] == 7 && s0 > 1000 && s0 < 1020, "état initial et premier pas")
 }
 
+// MARK: 3 sexies ter. Thimbleweed Park (.ggpack)
+print("3 sexies ter. Thimbleweed Park")
+do {
+    // XOR inverse : chiffrer = x_i = clair_i ^ prev, puis octet = x_i ^ clé ^ (i × mult)
+    let clear: [UInt8] = Array("OggS and some voice data".utf8)
+    let key = GGPack.keys[0]
+    var enc = [UInt8](repeating: 0, count: clear.count), prev = UInt8(truncatingIfNeeded: clear.count)
+    for i in 0 ..< clear.count { let x = clear[i] ^ prev; enc[i] = x ^ key.bytes[i & 15] ^ UInt8(truncatingIfNeeded: i &* key.mult); prev = x }
+    var dec = enc
+    GGPack.unxor(&dec, key: key)
+    check(dec == clear, "déchiffrement XOR")
+    check(GGPack.isVoice("BANKMANAGER_20204.ogg") && !GGPack.isVoice("Ending_4416.ogg") && GGPack.id("RAY_20002") == 20002, "noms des voix")
+    let t = GGPack.tsv(Array("text_id\ten\n20001\tAgent Ray! {laugh} Hi.\n".utf8))
+    check(t == ["20001": "Agent Ray! Hi."], "textes .tsv")
+    check(CastingLink.prefix("RAY_20002") == "ray" && CastingLink.speakers(game: "test-twp")["ray"] == "Agent Ray", "personnages")
+}
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""
