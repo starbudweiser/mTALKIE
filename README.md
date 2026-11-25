@@ -6,7 +6,7 @@ Extract, play and export the voice lines of LucasArts SCUMM "talkie" CD games on
 
 mTALKIE opens the speech files of the CD versions of Indiana Jones and the Fate of Atlantis, Day of the Tentacle and
 Sam & Max Hit the Road (`MONSTER.SOU`, or the `.SO3` / `.SOG` / `.SOF` files compressed by the ScummVM tools), and the
-speech bank of the Monkey Island Special Editions (`Speech.xwb`), the iMUSE archives of The Dig (`DIGVOICE.BUN`), the
+speech bank of the Monkey Island Special Editions (`Speech.xwb`), the iMUSE archives of The Dig (`DIGVOICE.BUN`) and The Curse of Monkey Island (`VOXDISK1.BUN`, `VOXDISK2.BUN`), the
 voice archives of Escape from Monkey Island (`voiceAll.m4b`…) and the `RESOURCE.AUD` of Sierra SCI32 CD games such as Space Quest 6. It lists every line with its spoken text, length and
 waveform, plays it, and exports all lines or a selection as WAV, AIFF or FLAC. Native
 Swift, no ffmpeg or other dependency. Original files are never modified.
@@ -24,7 +24,8 @@ Swift, no ffmpeg or other dependency. Original files are never modified.
   (the reference used by the game scripts and by ScummVM).
 - Spoken text of each line, read from the game scripts (`ATLANTIS.001`…) or, for the Special Editions, from
   `speech.info` in English, French, Italian, German or Spanish; line names from `SpeechCues.xsb`. The Dig: English text
-  from `DIG.LA1` and the translation from `LANGUAGE.BND`. Sierra: text from the game's message resources, lines named
+  from `DIG.LA1` and the translation from `LANGUAGE.BND`. The Curse of Monkey Island: English text from `COMI.LA1` / `COMI.LA2` and
+  the translation from `LANGUAGE.TAB`. Sierra: text from the game's message resources, lines named
   room_noun_verb_condition_sequence from its audio maps. Escape from Monkey Island: VIMA voices, text from `script.tab`
   (in `artAll.m4b`).
 - Play with a double-click or Space; drag a line to the Finder to get a WAV.
@@ -42,7 +43,7 @@ Swift, no ffmpeg or other dependency. Original files are never modified.
 A `.SOU` file is a `SOU ` header followed, for each line, by a `VCTL` block (lip-sync data) and a Creative Voice file
 (`Creative Voice File\x1a`, 8-bit unsigned PCM, sample rate = 1 000 000 / (256 − divisor)). The compressed `.SO3` / `.SOG`
 / `.SOF` files start with a big-endian index (original offset, data offset, lip-sync size, compressed size) followed by
-the MP3 / Ogg Vorbis / FLAC streams. Full Throttle, The Dig and The Curse of Monkey Island use other formats (`.BUN`).
+the MP3 / Ogg Vorbis / FLAC streams. Full Throttle uses another format; The Dig and The Curse of Monkey Island are read from their `.BUN` archives.
 
 ## Build
 
@@ -61,4 +62,4 @@ mTALKIE is free. If it is useful to you, you can [support the project](https://g
 ---
 
 *Français :* mTALKIE extrait, écoute et exporte les voix des jeux LucasArts SCUMM en version CD (fichiers `.SOU`,
-`.SO3`, `.SOG`, `.SOF`) des éditions spéciales de Monkey Island (`Speech.xwb`) de The Dig (`DIGVOICE.BUN`), d'Escape from Monkey Island (`voiceAll.m4b`…) et des jeux Sierra en CD comme Space Quest 6 (`RESOURCE.AUD`), avec le texte de chaque réplique, en WAV, AIFF ou FLAC. Aucun fichier d'origine n'est modifié. Fait partie du DESKTOP MAC TOOLKIT.
+`.SO3`, `.SOG`, `.SOF`) des éditions spéciales de Monkey Island (`Speech.xwb`) de The Dig (`DIGVOICE.BUN`), de The Curse of Monkey Island (`VOXDISK1.BUN`, `VOXDISK2.BUN`), d'Escape from Monkey Island (`voiceAll.m4b`…) et des jeux Sierra en CD comme Space Quest 6 (`RESOURCE.AUD`), avec le texte de chaque réplique, en WAV, AIFF ou FLAC. Aucun fichier d'origine n'est modifié. Fait partie du DESKTOP MAC TOOLKIT.

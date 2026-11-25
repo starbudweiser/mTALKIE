@@ -288,9 +288,22 @@ if FileManager.default.fileExists(atPath: emiURL.path) {
     } catch { check(false, "Escape from Monkey Island : \(error)") }
 }
 
+// MARK: 3 sexies bis. Curse of Monkey Island : codec 13 (ADPCM IMA à taille variable)
+print("3 sexies bis. Codec 13 (COMI)")
+do {
+    let hdr = BunArchive.imaDecode([0, 4, 0x69, 0x4D, 0x55, 0x53] + [UInt8](repeating: 0, count: 64), channels: 1, outputSize: 32)
+    check(Array(hdr.prefix(4)) == Array("iMUS".utf8) && hdr.count == 32, "en-tête recopié tel quel")
+    // état initial : index 0, mot 1000 ; paquets nuls (2 bits, signe 0) → le signal monte doucement
+    let seed: [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03, 0xE8]
+    let out = BunArchive.imaDecode(seed + [UInt8](repeating: 0, count: 16), channels: 1, outputSize: 8)
+    let s0 = Int(Int16(bitPattern: UInt16(out[0]) << 8 | UInt16(out[1])))
+    check(BunArchive.imcBits[0] == 2 && BunArchive.imcBits[88] == 7 && s0 > 1000 && s0 < 1020, "état initial et premier pas")
+}
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
-check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == "", "préfixes des répliques nommées")
+check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""
+      && CastingLink.prefix("B2GT301") == "gt" && CastingLink.prefix("LIFEDIAL001") == "lif", "préfixes des répliques nommées")
 check(CastingLink.tags("You fight like a cow.").contains("insult") && CastingLink.tags("Hello there?") == ["greeting", "question"]
       && CastingLink.tags("Ahhh!") == ["scream"] && CastingLink.tags("Hahaha, fool!").contains("laugh"), "étiquettes automatiques")
 do {

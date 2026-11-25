@@ -1,7 +1,8 @@
-// mTALKIE — jeux LucasArts à iMUSE numérique (The Dig ; Full Throttle et Curse of Monkey Island en partie) : archives .BUN.
+// mTALKIE — jeux LucasArts à iMUSE numérique (The Dig, The Curse of Monkey Island) : archives .BUN.
 // Archive « LB83 » : [LB83][position du répertoire BE32][nombre BE32], répertoire de 20 octets par fichier (nom sur 12, position, taille).
 // Chaque fichier : [COMP][nombre de blocs BE32][8 octets][par bloc : position, taille, codec, 4 octets], blocs de 8 Ko décompressés.
-// Codecs 0 (copie), 1 (LZ LucasArts), 2 et 3 (LZ puis une ou deux intégrations). Le résultat est un fichier iMUS :
+// Codecs 0 (copie), 1 (LZ LucasArts), 2 et 3 (LZ puis une ou deux intégrations), 13 et 15 (ADPCM IMA à taille variable,
+// mono ou stéréo : voix de Curse of Monkey Island, fichiers « B2GT301.IMX »). Le résultat est un fichier iMUS :
 // [iMUS][MAP : FRMT (bits, fréquence, voies), TEXT, REGN, STOP…][DATA : échantillons 8 bits non signés, 12 bits groupés ou 16 bits BE].
 import Foundation
 import NaturalLanguage
@@ -27,7 +28,8 @@ enum BunArchive {
             let off = be32(d, e + 12), size = be32(d, e + 16)
             guard off + size <= d.count else { throw FormatError.notSoundBank }
             var line = Line(id: i + 1, offset: i, start: off, length: size, rate: 0, duration: 0)
-            line.name = String(decoding: base, as: UTF8.self) + String(decoding: ext, as: UTF8.self)
+            let e3 = String(decoding: ext, as: UTF8.self)
+            line.name = String(decoding: base, as: UTF8.self) + (e3.uppercased() == "IMX" ? "" : e3)   // COMI : « B2GT301.IMX » → B2GT301
             out.append(line)
         }
         return out
@@ -59,11 +61,90 @@ enum BunArchive {
                 block = lzDecode(src)
                 if codec == 2 { integrate(&block, from: 1) }
                 if codec == 3 { integrate(&block, from: 2); integrate(&block, from: 1) }   // première passe dès le 3ᵉ octet
-            default: throw FormatError.unsupportedCodec     // codecs 4 à 15 (Curse of Monkey Island…)
+            case 13, 15: block = imaDecode(src, channels: codec == 13 ? 1 : 2, outputSize: 0x2000)
+            default: throw FormatError.unsupportedCodec     // codecs 4 à 12 (musiques)
             }
             out += block
         }
         return out
+    }
+
+    // MARK: Codecs 13 / 15 (ADPCM IMA à taille variable)
+
+    static let imcTable: [Int32] = [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97,
+        107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166,
+        1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,
+        10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767]
+
+    /// Ajustement de l'index de pas, par nombre de bits du paquet (2 à 7) et valeur des bits de données.
+    static let imxOther: [[Int]] = [
+        [-1, 4],
+        [-1, -1, 2, 8],
+        [-1, -1, -1, -1, 1, 2, 4, 6],
+        [-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6, 8, 12, 16, 32],
+        Array(repeating: -1, count: 16) + [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32],
+        Array(repeating: -1, count: 32) + Array(1 ... 32)]
+
+    /// Nombre de bits par paquet selon l'index de pas, et deltas précalculés (64 valeurs de données par index).
+    static let imcBits: [Int] = imcTable.map { v in
+        var put = 1, t = ((Int(v) * 4) / 7) / 2
+        while t != 0 { t /= 2; put += 1 }
+        return min(8, max(3, put)) - 1
+    }
+    static let imcDelta: [Int32] = {
+        var out = [Int32](repeating: 0, count: 89 * 64)
+        for n in 0 ..< 64 {
+            for pos in 0 ..< 89 {
+                var count = 32, put: Int32 = 0, v = imcTable[pos]
+                repeat { if count & n != 0 { put += v }; count /= 2; v /= 2 } while count != 0
+                out[n + pos * 64] = put
+            }
+        }
+        return out
+    }()
+
+    /// Un bloc : 2 octets BE = taille d'un en-tête copié tel quel (0 : état initial de chaque voie, 9 octets), puis les paquets
+    /// de chaque voie à la suite, sur un nombre de bits qui suit l'index de pas. Sortie en 16 bits BE entrelacés.
+    static func imaDecode(_ src: [UInt8], channels: Int, outputSize: Int) -> [UInt8] {
+        guard src.count >= 2 else { return [] }
+        var dst = [UInt8](repeating: 0, count: outputSize)
+        var p = 2, d = 0, size = outputSize
+        var tablePos = [Int](repeating: 0, count: channels), word = [Int32](repeating: 0, count: channels)
+        let first = Int(src[0]) << 8 | Int(src[1])
+        if first != 0 {
+            let n = min(first, src.count - 2, size)
+            for i in 0 ..< n { dst[i] = src[2 + i] }
+            p += n; d = n; size -= n
+        } else {
+            for c in 0 ..< channels where p + 9 <= src.count {
+                tablePos[c] = Int(src[p])
+                word[c] = Int32(bitPattern: UInt32(src[p + 5]) << 24 | UInt32(src[p + 6]) << 16 | UInt32(src[p + 7]) << 8 | UInt32(src[p + 8]))
+                p += 9
+            }
+        }
+        var bitOffset = 0
+        for c in 0 ..< channels {
+            var pos = min(88, tablePos[c]), out = word[c]
+            var dpos = d + c * 2
+            var left = channels == 1 ? (size + 1) / 2 : size / 4
+            while left > 0 {
+                left -= 1
+                let bits = imcBits[pos]
+                let r = p + (bitOffset >> 3)
+                let hi = r < src.count ? Int(src[r]) : 0, lo = r + 1 < src.count ? Int(src[r + 1]) : 0
+                let readWord = ((hi << 8 | lo) << (bitOffset & 7)) & 0xFFFF
+                let packet = readWord >> (16 - bits)
+                bitOffset += bits
+                let sign = 1 << (bits - 1), data = packet & (sign - 1)
+                var delta = (imcTable[pos] >> Int32(bits - 1)) + imcDelta[(data << (7 - bits)) + pos * 64]
+                if packet & sign != 0 { delta = -delta }
+                out = min(32767, max(-32768, out + delta))
+                if dpos + 1 < dst.count { dst[dpos] = UInt8(truncatingIfNeeded: out >> 8); dst[dpos + 1] = UInt8(truncatingIfNeeded: out) }
+                dpos += channels * 2
+                pos = min(88, max(0, pos + imxOther[bits - 2][data]))
+            }
+        }
+        return dst
     }
 
     private static func integrate(_ b: inout [UInt8], from start: Int) {
@@ -184,17 +265,22 @@ enum BunArchive {
                 guard p[i] == 0x2F, isKey(p[i + 1]) else { i += 1; continue }
                 var j = i + 1
                 while j < n, isKey(p[j]) { j += 1 }
-                guard j < n - 5, p[j] == 0x2E else { i += 1; continue }
-                var k = j + 1
-                while k < n, p[k] >= 0x30, p[k] <= 0x39 { k += 1 }
-                guard k < n, p[k] == 0x2F, k - j - 1 >= 1, k - j - 1 <= 4 else { i += 1; continue }
+                guard j < n - 5 else { i += 1; continue }
+                var k = j
+                if p[j] == 0x2E {                                   // The Dig : « /LIFEDIAL.001/ »
+                    k = j + 1
+                    while k < n, p[k] >= 0x30, p[k] <= 0x39 { k += 1 }
+                    guard k < n, p[k] == 0x2F, k - j - 1 >= 1, k - j - 1 <= 4 else { i += 1; continue }
+                } else {                                            // COMI : « /B2GT301/ »
+                    guard p[j] == 0x2F, j - i - 1 >= 4, j - i - 1 <= 8, p[(i + 1) ..< j].contains(where: { $0 >= 0x30 && $0 <= 0x39 }) else { i += 1; continue }
+                }
                 var e = k + 1
                 var bytes: [UInt8] = []
                 while e < n, p[e] != 0, bytes.count < 600 {
                     if p[e] == 0xFF, e + 1 < n { e += p[e + 1] == 0x0A ? 16 : 4; continue }   // codes de contrôle SCUMM
                     bytes.append(p[e] < 0x20 ? 0x20 : p[e]); e += 1
                 }
-                let key = String(decoding: p[(i + 1) ..< j], as: UTF8.self) + String(decoding: p[(j + 1) ..< k], as: UTF8.self)
+                let key = String(decoding: p[(i + 1) ..< j], as: UTF8.self) + (k > j ? String(decoding: p[(j + 1) ..< k], as: UTF8.self) : "")
                 if out[key] == nil, let t = clean(bytes, encoding: dos437), !t.isEmpty { out[key] = t }
                 i = e
             }
@@ -218,6 +304,25 @@ enum BunArchive {
         return out
     }
 
+    /// Traduction de COMI (LANGUAGE.TAB) : lignes « B2GT301<tab>texte » en Windows-1252.
+    static func tabTexts(_ url: URL) -> [String: String] {
+        guard let d = try? Data(contentsOf: url) else { return [:] }
+        var out: [String: String] = [:]
+        for raw in d.split(whereSeparator: { $0 == 0x0A || $0 == 0x0D }) {
+            let l = Array(raw)
+            guard let tab = l.firstIndex(of: 0x09), tab > 0, tab <= 12 else { continue }
+            let key = String(decoding: l[..<tab], as: UTF8.self).uppercased()
+            var bytes: [UInt8] = []
+            var e = tab + 1
+            while e < l.count {
+                if l[e] == 0xFF, e + 1 < l.count { e += l[e + 1] == 0x0A ? 16 : 4; continue }
+                bytes.append(l[e] < 0x20 ? 0x20 : l[e]); e += 1
+            }
+            if out[key] == nil, let t = clean(bytes, encoding: .windowsCP1252), !t.isEmpty { out[key] = t }
+        }
+        return out
+    }
+
     private static let dos437 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.dosLatinUS.rawValue)))
     private static let dos850 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.dosLatin1.rawValue)))
 
@@ -232,14 +337,25 @@ enum BunArchive {
         let items = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey])) ?? []
         var sets: [(String, [String: String])] = []
         var first: URL?
-        if let la1 = items.filter({ ["LA1", "LAB"].contains($0.pathExtension.uppercased()) }).max(by: { size($0) < size($1) }) {
-            let t = scriptTexts(la1)
-            if !t.isEmpty { sets.append((detect(t), t)); first = la1 }
+        // Scripts : The Dig (DIG.LA1 / .LAB), COMI (COMI.LA1 et COMI.LA2, dans RESOURCE ou dans le dossier parent).
+        let parent = ((try? FileManager.default.contentsOfDirectory(at: dir.deletingLastPathComponent(), includingPropertiesForKeys: [.fileSizeKey])) ?? [])
+        let scripts = (items + parent).filter { ["LA1", "LA2", "LAB"].contains($0.pathExtension.uppercased()) }
+        var seen = Set<String>(), merged: [String: String] = [:]
+        for u in scripts.sorted(by: { size($0) > size($1) }) where seen.insert(u.lastPathComponent.uppercased()).inserted {
+            merged.merge(scriptTexts(u)) { a, _ in a }
+            first = first ?? u
         }
+        if !merged.isEmpty { sets.append((detect(merged), merged)) } else { first = nil }
         if let bnd = items.first(where: { $0.lastPathComponent.uppercased() == "LANGUAGE.BND" }) {
             let t = languageTexts(bnd)
             let code = detect(t)
             if !t.isEmpty, !sets.contains(where: { $0.0 == code }) { sets.append((code, t)); first = first ?? bnd }
+        }
+        if let tab = (items + parent).first(where: { $0.lastPathComponent.uppercased() == "LANGUAGE.TAB" }) {
+            let t = tabTexts(tab)
+            let code = detect(t)
+            // Voix doublées dans la langue de LANGUAGE.TAB (version française : voix françaises) : ces textes passent en premier.
+            if !t.isEmpty, !sets.contains(where: { $0.0 == code }) { sets.insert((code, t), at: 0); first = first ?? tab }
         }
         guard let u = first, !sets.isEmpty else { return nil }
         return (u, sets)

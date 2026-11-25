@@ -30,6 +30,10 @@ enum CastingLink {
     static func prefix(_ name: String) -> String {
         guard !name.isEmpty else { return "" }
         if let u = name.firstIndex(of: "_") { return String(name[..<u]).lowercased() }
+        // Curse of Monkey Island : « B2GT301 » = scène B2, personnage GT (Guybrush), réplique 301.
+        if name.range(of: #"^[A-Z0-9]{2}[A-Z]{2}[0-9]{3,4}$"#, options: .regularExpression) != nil {
+            return String(Array(name)[2 ..< 4]).lowercased()
+        }
         return String(name.prefix { $0.isLetter }.prefix(3)).lowercased()
     }
     /// Personnages connus d'après les préfixes des éditions spéciales de Monkey Island ; les autres se nomment à la main.
@@ -37,6 +41,7 @@ enum CastingLink {
         "guy": "Guybrush", "lch": "LeChuck", "lec": "LeChuck", "ela": "Elaine", "el1": "Elaine", "wal": "Wally", "mur": "Murray",
         "stn": "Stan", "sta": "Stan", "lrg": "Largo", "oti": "Otis", "car": "Carla", "mea": "Meathook", "kat": "Kate Capsize",
         "rum": "Rum Rogers", "ozz": "Ozzie Mandrill", "cha": "Charles L. Charles",
+        "gt": "Guybrush", "lc": "LeChuck", "mr": "Murray", "wy": "Wally", "kn": "Kenny Falmouth", "hm": "Haggis McMutton",
     ]
     /// Noms donnés par l'utilisateur, par jeu (préfixe → personnage), retenus d'un envoi à l'autre.
     static func speakers(game: String) -> [String: String] {
