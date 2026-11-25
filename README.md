@@ -1,28 +1,38 @@
 # mTALKIE
 
-Extract, play and export the voice lines of LucasArts SCUMM "talkie" CD games on macOS.
+Extract, play and export the voice lines of classic adventure games on macOS: LucasArts (SCUMM, iMUSE, GrimE),
+Sierra, Revolution and Terrible Toybox.
 
 ## About
 
-mTALKIE opens the speech files of the CD versions of Indiana Jones and the Fate of Atlantis, Day of the Tentacle and
-Sam & Max Hit the Road (`MONSTER.SOU`, or the `.SO3` / `.SOG` / `.SOF` files compressed by the ScummVM tools), and the
-speech bank of the Monkey Island Special Editions (`Speech.xwb`), the iMUSE archives of The Dig (`DIGVOICE.BUN`) and The Curse of Monkey Island (`VOXDISK1.BUN`, `VOXDISK2.BUN`), the
-archives of Thimbleweed Park (`ThimbleweedPark.ggpack2`, or just drop the game or its folder), the speech of
-Broken Sword: The Shadow of the Templars in its ScummVM edition (`speech1.clv`, `speech2.clv`, also `.clf` / `.cl3`), of
-Broken Sword – Reforged (`english.osa`, `french.osa`…) and of Broken Sword 2 Remastered (`Audio/Speech_english.dat`…), the
-voice archives of Escape from Monkey Island (`voiceAll.m4b`…) and the `RESOURCE.AUD` of Sierra SCI32 CD games such as Space Quest 6. It lists every line with its spoken text, length and
+mTALKIE opens the speech files of these games (drop the file, or simply the game or its folder):
+
+| Game | Files |
+|---|---|
+| Indiana Jones and the Fate of Atlantis, Day of the Tentacle, Sam & Max Hit the Road (CD) | `MONSTER.SOU`, or `.SO3` / `.SOG` / `.SOF` compressed by the ScummVM tools |
+| The Secret of Monkey Island and Monkey Island 2: Special Edition | `audio/Speech.xwb` |
+| The Dig | `DIGVOICE.BUN` |
+| The Curse of Monkey Island | `RESOURCE/VOXDISK1.BUN`, `VOXDISK2.BUN` |
+| Escape from Monkey Island | `voiceAll.m4b`… |
+| Sierra SCI32 CD games (Space Quest 6…) | `RESOURCE.AUD` |
+| Broken Sword: The Shadow of the Templars (ScummVM edition) | `speech/speech1.clv`, `speech2.clv` (also `.clf` / `.cl3`) |
+| Broken Sword – Shadow of the Templars: Reforged | `english.osa`, `french.osa`… |
+| Broken Sword 2: Remastered | `Audio/Speech_english.dat`… (voices only for now) |
+| Thimbleweed Park | `ThimbleweedPark.ggpack2` |
+
+It lists every line with its spoken text, length and
 waveform, plays it, and exports all lines or a selection as WAV, AIFF or FLAC. Native
 Swift, no ffmpeg or other dependency. Original files are never modified.
 
 - Authors: Starbudweiser & Claude Code (Anthropic)
 - License: MIT, © 2026 Starbudweiser
 - Provided as is, without warranty. Use it with your own copies of the games.
-- Not affiliated with LucasArts, Lucasfilm Games or the ScummVM project.
+- Not affiliated with LucasArts, Lucasfilm Games, Sierra, Revolution Software, Terrible Toybox or the ScummVM project.
 - Part of the DESKTOP MAC TOOLKIT. See the app's **mTALKIE › About mTALKIE** menu.
 
 ## Features
 
-- Drag and drop a voice file, or a game folder (`MONSTER.*` is found automatically).
+- Drag and drop a voice file, a game or its folder: the voice file is found automatically.
 - Thousands of lines in a fast list: number, waveform, length, sample rate and offset in the original `.SOU`
   (the reference used by the game scripts and by ScummVM).
 - Spoken text of each line, read from the game scripts (`ATLANTIS.001`…) or, for the Special Editions, from
@@ -65,5 +75,10 @@ mTALKIE is free. If it is useful to you, you can [support the project](https://g
 
 ---
 
-*Français :* mTALKIE extrait, écoute et exporte les voix des jeux LucasArts SCUMM en version CD (fichiers `.SOU`,
-`.SO3`, `.SOG`, `.SOF`) des éditions spéciales de Monkey Island (`Speech.xwb`) de The Dig (`DIGVOICE.BUN`), de The Curse of Monkey Island (`VOXDISK1.BUN`, `VOXDISK2.BUN`), de Thimbleweed Park (`ThimbleweedPark.ggpack2`), de Broken Sword (`speech1.clv`, `speech2.clv`, Reforged `english.osa`, 2 Remastered `Speech_english.dat`), d'Escape from Monkey Island (`voiceAll.m4b`…) et des jeux Sierra en CD comme Space Quest 6 (`RESOURCE.AUD`), avec le texte de chaque réplique, en WAV, AIFF ou FLAC. Aucun fichier d'origine n'est modifié. Fait partie du DESKTOP MAC TOOLKIT.
+*Français :* mTALKIE extrait, écoute et exporte en WAV, AIFF ou FLAC les voix des jeux d'aventure classiques, avec le
+texte de chaque réplique : jeux LucasArts en CD (Indiana Jones and the Fate of Atlantis, Day of the Tentacle, Sam & Max,
+`MONSTER.SOU`…), éditions spéciales de Monkey Island (`Speech.xwb`), The Dig (`DIGVOICE.BUN`), The Curse of Monkey Island
+(`VOXDISK1.BUN`, `VOXDISK2.BUN`), Escape from Monkey Island (`voiceAll.m4b`), jeux Sierra en CD comme Space Quest 6
+(`RESOURCE.AUD`), Broken Sword (version ScummVM `speech1.clv`, Reforged `english.osa`, Broken Sword 2 Remastered
+`Speech_english.dat`) et Thimbleweed Park (`ThimbleweedPark.ggpack2`). Il suffit de glisser le fichier, le jeu ou son dossier.
+Aucun fichier d'origine n'est modifié. Fait partie du DESKTOP MAC TOOLKIT.

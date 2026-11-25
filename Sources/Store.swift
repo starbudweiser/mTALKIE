@@ -308,11 +308,15 @@ final class Store: ObservableObject {
         }
         // MONSTER.* (versions CD), puis Speech.xwb (éditions spéciales), sinon le premier fichier trouvé
         let stem = { (u: URL) in u.deletingPathExtension().lastPathComponent.uppercased() }
-        return candidates.first { stem($0) == "MONSTER" } ?? candidates.first { stem($0) == "SPEECH" } ?? candidates.first { stem($0) == "VOICEALL" }
-            ?? candidates.first { stem($0).contains("VOICE") || stem($0).hasPrefix("VOX") }
-            ?? candidates.first { $0.pathExtension.lowercased() == "ggpack2" } ?? candidates.first { stem($0) == "SPEECH1" }
-            ?? candidates.first { stem($0) == "ENGLISH" && Aufs.isSpeech($0) } ?? candidates.first { stem($0) == "SPEECH_ENGLISH" }
-            ?? candidates.first { $0.lastPathComponent.lowercased() != "sfx.osa" }
+        let rules: [(URL) -> Bool] = [
+            { stem($0) == "MONSTER" }, { stem($0) == "SPEECH" }, { stem($0) == "VOICEALL" },
+            { stem($0).contains("VOICE") || stem($0).hasPrefix("VOX") },
+            { $0.pathExtension.lowercased() == "ggpack2" }, { stem($0) == "SPEECH1" },
+            { stem($0) == "ENGLISH" && Aufs.isSpeech($0) }, { stem($0) == "SPEECH_ENGLISH" },
+            { $0.lastPathComponent.lowercased() != "sfx.osa" },
+        ]
+        for rule in rules { if let u = candidates.first(where: rule) { return u } }
+        return nil
     }
 
     private func addRecent(_ url: URL) {
