@@ -15,9 +15,22 @@
 				<string>so3</string>
 				<string>sog</string>
 				<string>sof</string>
+				<string>xwb</string>
+				<string>bun</string>
+				<string>aud</string>
+				<string>m4b</string>
+				<string>ggpack1</string>
+				<string>ggpack2</string>
+				<string>ggpack3</string>
+				<string>ggpack4</string>
+				<string>ggpack5</string>
+				<string>clv</string>
+				<string>clf</string>
+				<string>cl3</string>
+				<string>osa</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>SCUMM speech file</string>
+			<string>Adventure game speech file</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
