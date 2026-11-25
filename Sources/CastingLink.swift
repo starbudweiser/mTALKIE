@@ -157,7 +157,7 @@ enum CastingLink {
 
     // MARK: paquets
     struct Source: Encodable { var kind = "game"; var title: String; var id: String }
-    struct VoicePart: Encodable { var name, lang, audio, text: String; var gender: String?; var description: String? }
+    struct VoicePart: Encodable { var name, lang, audio, text: String; var gender: String?; var description: String?; var character: String? }
     struct LinePart: Encodable {
         var key: String; var text: String; var character: String?; var lang: String?
         var duration: Double; var tags: [String]?; var audio: String?
@@ -192,13 +192,13 @@ enum CastingLink {
         } catch { try? fm.removeItem(at: tmp); throw error }
     }
 
-    static func sendVoice(_ bank: SoundBank, lines: [Line], name: String, lang: String, gender: String, description: String) throws {
+    static func sendVoice(_ bank: SoundBank, lines: [Line], name: String, lang: String, gender: String, description: String, character: String = "") throws {
         let a = try assemble(bank, lines)
         try publish("voice") { dir in
             try WavWriter.data(a.pcm).write(to: dir.appendingPathComponent("voice.wav"))
             return Manifest(kind: "voice", origin: origin, source: Source(title: sourceTitle(bank), id: sourceID(bank)),
                             voice: VoicePart(name: name, lang: lang, audio: "voice.wav", text: a.text, gender: gender,
-                                             description: description.isEmpty ? nil : description))
+                                             description: description.isEmpty ? nil : description, character: character.isEmpty ? nil : character))
         }
     }
 

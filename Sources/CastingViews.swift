@@ -31,12 +31,12 @@ final class CastingSender: ObservableObject {
         catch { failure = error.localizedDescription }
     }
 
-    func sendVoice(_ lines: [Line], name: String, lang: String, gender: String, description: String) {
+    func sendVoice(_ lines: [Line], name: String, lang: String, gender: String, description: String, character: String) {
         guard let b = store.bank else { return }
         sending = true; failure = nil
         Task.detached(priority: .userInitiated) {
             do {
-                try CastingLink.sendVoice(b, lines: lines, name: name, lang: lang, gender: gender, description: description)
+                try CastingLink.sendVoice(b, lines: lines, name: name, lang: lang, gender: gender, description: description, character: character)
                 await MainActor.run { self.sending = false; self.result = L("cast.voice.sent", name) }
             } catch { await MainActor.run { self.sending = false; self.failure = error.localizedDescription } }
         }
@@ -90,6 +90,7 @@ struct CastVoiceSheet: View {
     @State private var lang = "en"
     @State private var gender = "man"
     @State private var desc = ""
+    @State private var character = ""
     @State private var rights = false
     static let langs = ["fr", "en", "es", "it", "de"]
     static let genders = ["man", "woman", "child", "creature"]
@@ -109,6 +110,7 @@ struct CastVoiceSheet: View {
             let sp = CastingLink.speakers(game: sender.game)
             let who = lines.first.flatMap { sp[CastingLink.prefix($0.name)] } ?? ""
             name = who.isEmpty ? "" : "\(who) (\(sender.game))"
+            character = who
             lang = Self.langs.contains(sender.lang) ? sender.lang : "en"
         }
     }
@@ -116,6 +118,7 @@ struct CastVoiceSheet: View {
     var form: some View {
         VStack(alignment: .leading, spacing: Socle.M.space2_5) {
             field(L("cast.voice.name")) { TextField(L("cast.voice.name.ph"), text: $name).textFieldStyle(.plain).socle(Socle.T.body).padding(.horizontal, 8).frame(height: 26).background(Socle.C.bgSunken) }
+            field(L("cast.voice.char")) { TextField(L("cast.voice.char.ph"), text: $character).textFieldStyle(.plain).socle(Socle.T.body).padding(.horizontal, 8).frame(height: 26).background(Socle.C.bgSunken) }
             field(L("cast.voice.lang")) { SocleSegmented(options: Self.langs, selection: lang, label: { $0.uppercased() }) { lang = $0 }.fixedSize() }
             field(L("cast.voice.gender")) { SocleSegmented(options: Self.genders, selection: gender, label: { L("cast.g." + $0) }) { gender = $0 }.fixedSize() }
             field(L("cast.voice.desc")) { TextField(L("cast.voice.desc.ph"), text: $desc).textFieldStyle(.plain).socle(Socle.T.body).padding(.horizontal, 8).frame(height: 26).background(Socle.C.bgSunken) }
@@ -139,7 +142,7 @@ struct CastVoiceSheet: View {
             HStack {
                 Spacer()
                 Button(L("btn.cancel")) { dismiss() }.buttonStyle(SocleButtonStyle(.secondary, height: 28)).fixedSize()
-                Button(L("cast.send")) { sender.sendVoice(usable, name: name.trimmingCharacters(in: .whitespaces), lang: lang, gender: gender, description: desc) }
+                Button(L("cast.send")) { sender.sendVoice(usable, name: name.trimmingCharacters(in: .whitespaces), lang: lang, gender: gender, description: desc, character: character.trimmingCharacters(in: .whitespaces)) }
                     .buttonStyle(SocleButtonStyle(.primary, height: 28)).fixedSize().keyboardShortcut(.defaultAction)
                     .disabled(!rights || name.trimmingCharacters(in: .whitespaces).isEmpty || text.isEmpty || usable.isEmpty || sender.sending)
             }

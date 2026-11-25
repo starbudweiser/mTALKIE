@@ -14,6 +14,8 @@ enum Loc {
     static let tables: [String: [String: String]] = ["fr": fr, "en": en, "es": es, "it": it]
 
     static let fr: [String: String] = [
+        "cast.voice.char": "Personnage",
+        "cast.voice.char.ph": "ex. Guybrush Threepwood (facultatif)",
         "cast.menu": "Envoyer à mCASTING",
         "cast.menu.voice": "Voix à cloner…",
         "cast.menu.lines": "Répliques vers la base…",
@@ -118,6 +120,8 @@ enum Loc {
     ]
 
     static let en: [String: String] = [
+        "cast.voice.char": "Character",
+        "cast.voice.char.ph": "e.g. Guybrush Threepwood (optional)",
         "cast.menu": "Send to mCASTING",
         "cast.menu.voice": "Voice to clone…",
         "cast.menu.lines": "Lines to the database…",
@@ -222,6 +226,8 @@ enum Loc {
     ]
 
     static let es: [String: String] = [
+        "cast.voice.char": "Personaje",
+        "cast.voice.char.ph": "p. ej. Guybrush Threepwood (opcional)",
         "cast.menu": "Enviar a mCASTING",
         "cast.menu.voice": "Voz para clonar…",
         "cast.menu.lines": "Réplicas a la base…",
@@ -326,6 +332,8 @@ enum Loc {
     ]
 
     static let it: [String: String] = [
+        "cast.voice.char": "Personaggio",
+        "cast.voice.char.ph": "es. Guybrush Threepwood (facoltativo)",
         "cast.menu": "Invia a mCASTING",
         "cast.menu.voice": "Voce da clonare…",
         "cast.menu.lines": "Battute al database…",
