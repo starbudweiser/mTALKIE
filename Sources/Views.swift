@@ -322,6 +322,11 @@ struct LinesTable: View {
         .contextMenu(forSelectionType: Line.ID.self) { ids in
             Button(L("menu.play")) { if let id = ids.sorted().first { store.play(id) } }
             Button(L("menu.exportSel")) { store.selection = ids; store.export(selectionOnly: true) }
+            Divider()
+            Group {
+                Button(L("cast.menu") + " · " + L("cast.menu.voice")) { store.selection = ids; CastingSender.shared.open(.voice) }
+                Button(L("cast.menu") + " · " + L("cast.menu.lines")) { store.selection = ids; CastingSender.shared.open(.lines) }
+            }.disabled(!CastingLink.available || store.exporting || CastingSender.shared.sending)
         } primaryAction: { ids in
             if let id = ids.sorted().first { store.play(id) }
         }
