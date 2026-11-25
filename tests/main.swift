@@ -329,6 +329,21 @@ do {
     check(Sword1.sections.count == 68 && Sword1.sections.last == 146, "sections de text.clu")
 } catch { check(false, "Broken Sword : \(error)") }
 
+// MARK: 3 sexies quinquies. Broken Sword Reforged / BS2 Remastered (AUFS)
+print("3 sexies quinquies. Archives AUFS")
+do {
+    var w: [UInt32] = [0x5346_5541, 2, 0x20001, 32, 4, 0x20000, 36, 4]      // « AUFS », 2 sons
+    var d = Data(bytes: &w, count: 32)
+    d.append(contentsOf: Array("OggSOggS".utf8))
+    let lines = try Aufs.parse(d, url: URL(fileURLWithPath: "/tmp/english.osa"))
+    check(lines.count == 2 && lines[0].name == "002-0000" && lines[0].start == 36 && lines[1].offset == 0x20001, "sommaire, tri par numéro")
+    check(Aufs.isSpeech(URL(fileURLWithPath: "/x/Speech_french.dat")) && !Aufs.isSpeech(URL(fileURLWithPath: "/x/sfx.osa"))
+          && Aufs.voiceLanguage(URL(fileURLWithPath: "/x/german.osa")) == "de", "fichiers de voix et langue")
+    var t: [UInt8] = Array("TEXT".utf8) + [0, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 20, 0, 0, 0] + Array("Hello\u{0}".utf8)
+    t[8] = 1
+    check(Aufs.texts(t) == [5: "Hello"], "textes TEXT")
+} catch { check(false, "AUFS : \(error)") }
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

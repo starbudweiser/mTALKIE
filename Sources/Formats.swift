@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1 }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -56,7 +56,8 @@ final class SoundBank: @unchecked Sendable {
         self.url = url
         guard let d = try? Data(contentsOf: url, options: .alwaysMapped) else { throw FormatError.unreadable }
         data = d
-        switch url.pathExtension.lowercased() {
+        switch Aufs.isSpeech(url) ? "aufs" : url.pathExtension.lowercased() {
+        case "aufs": codec = .aufs
         case "so3": codec = .mp3
         case "sog": codec = .ogg
         case "sof": codec = .flac
@@ -76,6 +77,7 @@ final class SoundBank: @unchecked Sendable {
         case .lab: lines = try Grime.parse(data)
         case .gg: lines = try GGPack.parse(data)
         case .sword1: lines = try Sword1.parse(data)
+        case .aufs: lines = try Aufs.parse(data, url: url)
         default: try parseCompressed()
         }
         guard !lines.isEmpty else { throw FormatError.empty }
@@ -215,6 +217,8 @@ final class SoundBank: @unchecked Sendable {
             return try GGPack.decode(data, line: line)
         case .sword1:
             return try Sword1.decode(data, line: line, ext: Sword1.ext(url))
+        case .aufs:
+            return try Aufs.decode(data, line: line)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -236,7 +240,8 @@ final class SoundBank: @unchecked Sendable {
                       "Monkey Island 2": "MI2", "The Secret of Monkey Island": "MI1", "Loom": "Loom",
                       "The Dig": "The Dig", "Full Throttle": "Full Throttle", "The Curse of Monkey Island": "MI3",
                       "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE",
-                      "Thimbleweed Park": "TWP", "Broken Sword: The Shadow of the Templars": "BS1"]
+                      "Thimbleweed Park": "TWP", "Broken Sword: The Shadow of the Templars": "BS1",
+                      "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -249,6 +254,7 @@ final class SoundBank: @unchecked Sendable {
         if url.pathExtension.lowercased() == "aud", let n = Sierra.gameName(dir: dir) { return n }
         if GGPack.isPack(url) { return "Thimbleweed Park" }
         if Sword1.isSpeech(url) { return "Broken Sword: The Shadow of the Templars" }
+        if Aufs.isSpeech(url) { return Aufs.isReforged(url) ? "Broken Sword: Shadow of the Templars – Reforged" : "Broken Sword 2: Remastered" }
         if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }
         if url.pathExtension.lowercased() == "xwb" {
             if parent.contains("MONKEY2.PAK") || names.contains("MONKEY2.PAK") { return "Monkey Island 2: Special Edition" }

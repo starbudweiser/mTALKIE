@@ -161,7 +161,7 @@ final class Store: ObservableObject {
         hasNames = b.lines.contains { !$0.name.isEmpty }
         addRecent(b.url)
         if b.lines.contains(where: { $0.rate == 0 }) { completeDurations(b) }
-        if b.codec == .xwb || b.codec == .bun || b.codec == .aud || b.codec == .lab || b.codec == .gg || b.codec == .sword1 { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
+        if b.codec == .xwb || b.codec == .bun || b.codec == .aud || b.codec == .lab || b.codec == .gg || b.codec == .sword1 || b.codec == .aufs { namedSets = [:]; namedOrder = []; namedURL = nil; loadNamedTexts(b); return }
         let chosen = textsChoice[b.url.path].map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         if let t = chosen ?? ScriptTexts.find(near: b.url) { loadTexts(t, for: b, report: chosen != nil) }
     }
@@ -223,6 +223,13 @@ final class Store: ObservableObject {
                 var t: [Int: String] = [:]
                 for l in lines { if let x = dict[l.name.lowercased()] { t[l.offset] = x } }
                 if !t.isEmpty { url = b.url.deletingLastPathComponent().appendingPathComponent("artAll.m4b"); sets = [(Grime.detect(dict), t)] }
+            } else if b.codec == .aufs, let found = Aufs.textSets(near: b.url) {
+                url = found.url
+                sets = found.sets.map { lang, dict in
+                    var t: [Int: String] = [:]
+                    for l in lines { if let x = dict[l.offset] { t[l.offset] = x } }
+                    return (lang, t)
+                }.filter { !$0.1.isEmpty }
             } else if b.codec == .sword1, let found = Sword1.textSets(near: b.url) {
                 url = found.url
                 sets = found.sets.map { lang, dict in
@@ -290,20 +297,22 @@ final class Store: ObservableObject {
         loadTexts(u, for: b, report: true)
     }
 
-    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3"]
+    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3", "osa"]
 
     static func findBank(in dir: URL) -> URL? {
         guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return nil }
         var candidates: [URL] = []
         for case let u as URL in e {
             if e.level > 3 { e.skipDescendants(); continue }
-            if extensions.contains(u.pathExtension.lowercased()) { candidates.append(u) }
+            if extensions.contains(u.pathExtension.lowercased()) || Aufs.isSpeech(u) { candidates.append(u) }
         }
         // MONSTER.* (versions CD), puis Speech.xwb (éditions spéciales), sinon le premier fichier trouvé
         let stem = { (u: URL) in u.deletingPathExtension().lastPathComponent.uppercased() }
         return candidates.first { stem($0) == "MONSTER" } ?? candidates.first { stem($0) == "SPEECH" } ?? candidates.first { stem($0) == "VOICEALL" }
             ?? candidates.first { stem($0).contains("VOICE") || stem($0).hasPrefix("VOX") }
-            ?? candidates.first { $0.pathExtension.lowercased() == "ggpack2" } ?? candidates.first { stem($0) == "SPEECH1" } ?? candidates.first
+            ?? candidates.first { $0.pathExtension.lowercased() == "ggpack2" } ?? candidates.first { stem($0) == "SPEECH1" }
+            ?? candidates.first { stem($0) == "ENGLISH" && Aufs.isSpeech($0) } ?? candidates.first { stem($0) == "SPEECH_ENGLISH" }
+            ?? candidates.first { $0.lastPathComponent.lowercased() != "sfx.osa" }
     }
 
     private func addRecent(_ url: URL) {
