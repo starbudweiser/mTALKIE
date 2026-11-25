@@ -1,7 +1,7 @@
 # mTALKIE
 
 Extract, play and export the voice lines of classic adventure games on macOS: LucasArts (SCUMM, iMUSE, GrimE),
-Sierra, Revolution, Interplay, Interactive Binary Illusions, Telltale, CrazyBunch and Terrible Toybox.
+Sierra, Revolution, Interplay, Interactive Binary Illusions, Telltale, CrazyBunch, id Software, 3D Realms, Xatrix and Terrible Toybox.
 
 ## About
 
@@ -23,6 +23,8 @@ mTALKIE opens the speech files of these games (drop the file, or simply the game
 | Tales of Monkey Island (episodes 1 to 5) | `Pack/2_MonkeyIsland10x_pc_voice.ttarch` |
 | Star Trek: Judgment Rites (CD) | the CD image `STJR1.dat` (GOG) or the `.VCC` files of the CD |
 | Leisure Suit Larry – Wet Dreams Don't Dry, Wet Dreams Dry Twice | the game itself, or `StreamingAssets/localisation/englishvo` (`germanvo`) |
+| Doom, Doom II (sounds, with a description of each) | `DOOM.WAD`, `DOOM2.WAD` |
+| Build engine games: Duke Nukem 3D, Redneck Rampage, Shadow Warrior… | `DUKE3D.GRP`, `REDNECK.GRP`… (`.VOC` and `.WAV` sounds) |
 
 It lists every line with its spoken text, length and
 waveform, plays it, and exports all lines or a selection as WAV, AIFF or FLAC. Native
@@ -31,7 +33,7 @@ Swift, no ffmpeg or other dependency. Original files are never modified.
 - Authors: Starbudweiser & Claude Code (Anthropic)
 - License: MIT, © 2026 Starbudweiser
 - Provided as is, without warranty. Use it with your own copies of the games.
-- Not affiliated with LucasArts, Lucasfilm Games, Sierra, Revolution Software, Interplay, Interactive Binary Illusions, Telltale Games, CrazyBunch, Assemble Entertainment, Terrible Toybox or the ScummVM project.
+- Not affiliated with LucasArts, Lucasfilm Games, Sierra, Revolution Software, Interplay, Interactive Binary Illusions, Telltale Games, CrazyBunch, Assemble Entertainment, id Software, 3D Realms, Xatrix, Terrible Toybox or the ScummVM project.
 - Part of the DESKTOP MAC TOOLKIT. See the app's **mTALKIE › About mTALKIE** menu.
 
 ## Features
@@ -84,5 +86,5 @@ texte de chaque réplique : jeux LucasArts en CD (Indiana Jones and the Fate of 
 `MONSTER.SOU`…), éditions spéciales de Monkey Island (`Speech.xwb`), The Dig (`DIGVOICE.BUN`), The Curse of Monkey Island
 (`VOXDISK1.BUN`, `VOXDISK2.BUN`), Escape from Monkey Island (`voiceAll.m4b`), jeux Sierra en CD comme Space Quest 6
 (`RESOURCE.AUD`), Broken Sword (version ScummVM `speech1.clv`, Reforged `english.osa`, Broken Sword 2 Remastered
-`Speech_english.dat`), Thimbleweed Park (`ThimbleweedPark.ggpack2`) Flight of the Amazon Queen (`queen.1c`) Tales of Monkey Island (`2_MonkeyIsland101_pc_voice.ttarch`…) Star Trek: Judgment Rites (image du CD `STJR1.dat` ou fichiers `.VCC`) et les deux Leisure Suit Larry de CrazyBunch (Wet Dreams Don't Dry, Wet Dreams Dry Twice : voix anglaises et allemandes, textes en 8 langues). Il suffit de glisser le fichier, le jeu ou son dossier.
+`Speech_english.dat`), Thimbleweed Park (`ThimbleweedPark.ggpack2`) Flight of the Amazon Queen (`queen.1c`) Tales of Monkey Island (`2_MonkeyIsland101_pc_voice.ttarch`…) Star Trek: Judgment Rites (image du CD `STJR1.dat` ou fichiers `.VCC`) et les deux Leisure Suit Larry de CrazyBunch (Wet Dreams Don't Dry, Wet Dreams Dry Twice : voix anglaises et allemandes, textes en 8 langues), les sons de Doom (`DOOM.WAD`) et des jeux Build comme Duke Nukem 3D (`DUKE3D.GRP`). Il suffit de glisser le fichier, le jeu ou son dossier.
 Aucun fichier d'origine n'est modifié. Fait partie du DESKTOP MAC TOOLKIT.

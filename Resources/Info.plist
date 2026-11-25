@@ -31,6 +31,8 @@
 				<string>1c</string>
 				<string>ttarch</string>
 				<string>vcc</string>
+				<string>wad</string>
+				<string>grp</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>Adventure game speech file</string>

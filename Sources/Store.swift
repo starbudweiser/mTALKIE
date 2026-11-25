@@ -223,6 +223,10 @@ final class Store: ObservableObject {
                 var t: [Int: String] = [:]
                 for l in lines { if let x = dict[l.name.lowercased()] { t[l.offset] = x } }
                 if !t.isEmpty { url = b.url.deletingLastPathComponent().appendingPathComponent("artAll.m4b"); sets = [(Grime.detect(dict), t)] }
+            } else if b.codec == .build, b.url.pathExtension.lowercased() == "wad" {
+                var t: [Int: String] = [:]
+                for l in lines { if let x = Build.doomText(l.name) { t[l.offset] = x } }
+                if !t.isEmpty { url = b.url; sets = [("en", t)] }
             } else if b.codec == .unity, case let found = Unity.textSets(near: b.url), !found.isEmpty {
                 url = b.url.deletingLastPathComponent()
                 sets = found.map { lang, dict in
@@ -323,7 +327,7 @@ final class Store: ObservableObject {
         loadTexts(u, for: b, report: true)
     }
 
-    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3", "osa", "1c", "ttarch", "vcc"]
+    static let extensions = ["sou", "so3", "sog", "sof", "xwb", "bun", "aud", "m4b", "ggpack1", "ggpack2", "ggpack3", "ggpack4", "ggpack5", "clv", "clf", "cl3", "osa", "1c", "ttarch", "vcc", "wad", "grp"]
 
     static func findBank(in dir: URL) -> URL? {
         // Jeux Unity (Larry) : les voix sont loin dans l'appli, StreamingAssets/localisation/englishvo.
@@ -343,7 +347,7 @@ final class Store: ObservableObject {
             { stem($0) == "MONSTER" }, { stem($0) == "SPEECH" }, { stem($0) == "VOICEALL" },
             { stem($0).contains("VOICE") || stem($0).hasPrefix("VOX") },
             { $0.pathExtension.lowercased() == "ggpack2" }, { stem($0) == "SPEECH1" },
-            { stem($0) == "ENGLISH" && Aufs.isSpeech($0) }, { Queen.isQueen($0) }, { stem($0).hasSuffix("_VOICE") }, { stem($0) == "STJR1" }, { stem($0) == "SPEECH_ENGLISH" },
+            { stem($0) == "ENGLISH" && Aufs.isSpeech($0) }, { Queen.isQueen($0) }, { stem($0).hasSuffix("_VOICE") }, { stem($0) == "STJR1" }, { ["DUKE3D", "REDNECK", "DOOM", "DOOM2", "DOOMU", "SW", "BLOOD"].contains(stem($0)) }, { stem($0) == "SPEECH_ENGLISH" },
             { $0.lastPathComponent.lowercased() != "sfx.osa" },
         ]
         for rule in rules { if let u = candidates.first(where: rule) { return u } }

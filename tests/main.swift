@@ -403,6 +403,27 @@ do {
     check(Unity.clipName(Unity.speakerName("hs_Door_Look_L10")) == "hs_Door_Look_L10" && CastingLink.prefix(Unity.speakerName("hs_Door_Look_L10")) == "larry", "personnage des remarques")
 }
 
+// MARK: 3 sexies decies. Doom (.WAD) et moteur Build (.GRP)
+print("3 sexies decies. Doom et Build")
+do {
+    func le(_ v: Int) -> [UInt8] { [UInt8(v & 255), UInt8((v >> 8) & 255), UInt8((v >> 16) & 255), UInt8(v >> 24)] }
+    // WAD : un son DMX de 4 échantillons (plus 2 × 16 octets de remplissage)
+    let dmx: [UInt8] = [3, 0, 0x11, 0x2B] + le(36) + [UInt8](repeating: 128, count: 16) + [0, 64, 192, 255] + [UInt8](repeating: 128, count: 16)
+    let wad = Array("IWAD".utf8) + le(1) + le(12 + dmx.count) + dmx + le(12) + le(dmx.count) + Array("DSPOSIT1".utf8)
+    let lines = try Build.parse(Data(wad))
+    let pcm = try Build.decode(Data(wad), line: lines[0])
+    check(lines.count == 1 && lines[0].name == "DSPOSIT1" && pcm.rate == 11025 && pcm.frames == 4 && Build.doomText("DSPOSIT1") == "Zombieman: sight 1", "WAD : son DMX et description")
+    // GRP : un fichier texte (ignoré) puis un son VOC 8 bits
+    var voc = Array("Creative Voice File".utf8) + [0x1A, 26, 0, 0x0A, 0x01, 0x29, 0x11]
+    voc += [1] + [6, 0, 0] + [0xA6, 0] + [128, 200, 50, 128] + [0]
+    let txt = Array("hello".utf8)
+    var grp = Array("KenSilverman".utf8) + le(2)
+    grp += Array("README.TXT".utf8) + [0, 0] + le(txt.count) + Array("LAUGH01.VOC".utf8) + [0] + le(voc.count) + txt + voc
+    let g = try Build.parse(Data(grp))
+    let v = try Build.decode(Data(grp), line: g[0])
+    check(g.count == 1 && g[0].name == "LAUGH01.VOC" && v.frames == 4, "GRP : sons VOC repérés et décodés")
+} catch { check(false, "Doom / Build : \(error)") }
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

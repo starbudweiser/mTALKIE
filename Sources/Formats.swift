@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale, trek, unity }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen, telltale, trek, unity, build }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -63,6 +63,7 @@ final class SoundBank: @unchecked Sendable {
         switch Unity.isVoiceBundle(url) ? "unity" : trek ? "trek" : Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
         case "trek": codec = .trek
         case "unity": codec = .unity
+        case "wad", "grp": codec = .build
         case "aufs": codec = .aufs
         case "queen": codec = .queen
         case "ttarch": codec = .telltale
@@ -88,6 +89,7 @@ final class SoundBank: @unchecked Sendable {
         case .aufs: lines = try Aufs.parse(data, url: url)
         case .trek: lines = try Trek.parse(data, url: url)
         case .unity: let r = try Unity.parse(data); lines = r.lines; unityBundle = r.bundle
+        case .build: lines = try Build.parse(data)
         case .telltale: let r = try Telltale.parse(data, url: url); lines = r.lines; ttarch = r.archive
         case .queen: lines = try Queen.parse(data); queenCompression = (try? Queen.table(data).compression) ?? 2
         default: try parseCompressed()
@@ -235,6 +237,8 @@ final class SoundBank: @unchecked Sendable {
             return try Queen.decode(data, line: line, compression: queenCompression)
         case .trek:
             return try Trek.decode(data, line: line)
+        case .build:
+            return try Build.decode(data, line: line)
         case .unity:
             guard let b = unityBundle else { throw FormatError.unsupportedCodec }
             return try Unity.decode(b, line: line)
@@ -266,7 +270,8 @@ final class SoundBank: @unchecked Sendable {
                       "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R",
                       "Flight of the Amazon Queen": "FOTAQ", "Tales of Monkey Island": "TMI",
                       "Star Trek: Judgment Rites": "ST JR",
-                      "Leisure Suit Larry – Wet Dreams Don't Dry": "LSL WDDD", "Leisure Suit Larry – Wet Dreams Dry Twice": "LSL WDDT"]
+                      "Leisure Suit Larry – Wet Dreams Don't Dry": "LSL WDDD", "Leisure Suit Larry – Wet Dreams Dry Twice": "LSL WDDT",
+                      "Doom": "Doom", "Doom II": "Doom II", "Duke Nukem 3D": "Duke 3D", "Redneck Rampage": "Redneck", "Shadow Warrior": "SW", "Blood": "Blood"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -281,6 +286,12 @@ final class SoundBank: @unchecked Sendable {
         if Sword1.isSpeech(url) { return "Broken Sword: The Shadow of the Templars" }
         if Queen.isQueen(url) { return "Flight of the Amazon Queen" }
         if Trek.looksLikeImage(url) || Trek.isVcc(url) { return "Star Trek: Judgment Rites" }
+        if Build.isArchive(url) {
+            let n = url.deletingPathExtension().lastPathComponent.uppercased()
+            let names = ["DOOM": "Doom", "DOOM1": "Doom", "DOOMU": "Doom", "DOOM2": "Doom II", "DUKE3D": "Duke Nukem 3D", "REDNECK": "Redneck Rampage",
+                         "RIDES": "Redneck Rampage", "SW": "Shadow Warrior", "BLOOD": "Blood"]
+            if let g = names[n] { return g }
+        }
         if Unity.isVoiceBundle(url) {
             return url.path.lowercased().contains("dry twice") ? "Leisure Suit Larry – Wet Dreams Dry Twice" : "Leisure Suit Larry – Wet Dreams Don't Dry"
         }
