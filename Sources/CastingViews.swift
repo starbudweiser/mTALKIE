@@ -74,9 +74,29 @@ struct CastingMenu: View {
             Button(L("cast.menu.voice")) { sender.open(.voice) }.disabled(store.selection.isEmpty)
             Button(L("cast.menu.lines")) { sender.open(.lines) }
         } label: { Text(L("cast.menu")) }
-        .menuStyle(.button).buttonStyle(SocleButtonStyle(.secondary, height: 28)).fixedSize()
+        .menuStyle(.button).buttonStyle(CastButtonStyle()).fixedSize()
         .disabled(!CastingLink.available || store.exporting || sender.sending)
         .help(CastingLink.available ? L("cast.menu.help") : L("cast.missing"))
+    }
+}
+
+/// Bouton vert (couleur du logo) pour l'envoi vers mCASTING.
+struct CastButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { Styled(configuration: configuration) }
+    private struct Styled: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var enabled
+        @State private var hover = false
+        var body: some View {
+            let base = Color(red: 0x16 / 255, green: 0xa3 / 255, blue: 0x4a / 255)
+            configuration.label
+                .lineLimit(1).socle(Socle.T.button).foregroundStyle(.white)
+                .padding(.horizontal, Socle.M.space4).frame(minHeight: 28)
+                .background(configuration.isPressed && enabled ? base.opacity(0.75) : hover && enabled ? base.opacity(0.88) : base,
+                            in: RoundedRectangle(cornerRadius: Socle.M.radius))
+                .contentShape(Rectangle()).opacity(enabled ? 1 : Socle.M.opacityDisabled)
+                .onHover { hover = $0 }
+        }
     }
 }
 
