@@ -28,6 +28,7 @@
 				<string>clf</string>
 				<string>cl3</string>
 				<string>osa</string>
+				<string>1c</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>Adventure game speech file</string>

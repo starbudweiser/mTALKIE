@@ -344,6 +344,16 @@ do {
     check(Aufs.texts(t) == [5: "Hello"], "textes TEXT")
 } catch { check(false, "AUFS : \(error)") }
 
+// MARK: 3 sexies sexies. Flight of the Amazon Queen (queen.1c)
+print("3 sexies sexies. Flight of the Amazon Queen")
+do {
+    var t: [String: String] = [:]
+    Queen.segments(" 2   6J", "Bonjour.*AOEt adieu.*XY00(237,112)Fin", into: &t)
+    check(t == ["020006J1": "Bonjour.", "020006J2": "Et adieu.", "020006J3": "Fin"], "segments et noms des voix")
+    check(Queen.code("BUD_020006P1") == "020006P1" && Queen.code("C18A_151") == "C18A_151" && Queen.code("JOE_JOE00241") == "JOE00241", "code d'origine")
+    check(CastingLink.prefix("JOE_020006J1") == "joe" && CastingLink.knownSpeakers["joe"] == "Joe King", "personnages")
+}
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

@@ -15,7 +15,7 @@ struct PCM {
     var duration: Double { rate > 0 ? Double(frames) / rate : 0 }
 }
 
-enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs }
+enum Codec: String { case voc, mp3, ogg, flac, xwb, bun, aud, lab, gg, sword1, aufs, queen }
 
 /// Une réplique du fichier.
 struct Line: Identifiable, Hashable {
@@ -49,15 +49,17 @@ final class SoundBank: @unchecked Sendable {
     let data: Data
     let codec: Codec
     private(set) var lines: [Line] = []
-    private var xact: [Xact.Entry] = []     // .xwb : format de chaque son, dans l'ordre des répliques
+    private var xact: [Xact.Entry] = []
+    private var queenCompression = 2        // queen.1c : 1 MP3, 2 Ogg Vorbis, 3 FLAC     // .xwb : format de chaque son, dans l'ordre des répliques
 
     init(url requested: URL) throws {
         let url = GGPack.isPack(requested) ? GGPack.voicePack(for: requested) : requested     // Thimbleweed Park : voix dans ggpack2
         self.url = url
         guard let d = try? Data(contentsOf: url, options: .alwaysMapped) else { throw FormatError.unreadable }
         data = d
-        switch Aufs.isSpeech(url) ? "aufs" : url.pathExtension.lowercased() {
+        switch Aufs.isSpeech(url) ? "aufs" : Queen.isQueen(url) ? "queen" : url.pathExtension.lowercased() {
         case "aufs": codec = .aufs
+        case "queen": codec = .queen
         case "so3": codec = .mp3
         case "sog": codec = .ogg
         case "sof": codec = .flac
@@ -78,6 +80,7 @@ final class SoundBank: @unchecked Sendable {
         case .gg: lines = try GGPack.parse(data)
         case .sword1: lines = try Sword1.parse(data)
         case .aufs: lines = try Aufs.parse(data, url: url)
+        case .queen: lines = try Queen.parse(data); queenCompression = (try? Queen.table(data).compression) ?? 2
         default: try parseCompressed()
         }
         guard !lines.isEmpty else { throw FormatError.empty }
@@ -219,6 +222,8 @@ final class SoundBank: @unchecked Sendable {
             return try Sword1.decode(data, line: line, ext: Sword1.ext(url))
         case .aufs:
             return try Aufs.decode(data, line: line)
+        case .queen:
+            return try Queen.decode(data, line: line, compression: queenCompression)
         case .mp3, .ogg, .flac:
             return try CompressedDecoder.decode(data.subdata(in: data.startIndex + line.start ..< data.startIndex + line.start + line.length),
                                                 ext: codec.rawValue)
@@ -241,7 +246,8 @@ final class SoundBank: @unchecked Sendable {
                       "The Dig": "The Dig", "Full Throttle": "Full Throttle", "The Curse of Monkey Island": "MI3",
                       "Monkey Island 2: Special Edition": "MI2 SE", "Escape from Monkey Island": "EMI", "The Secret of Monkey Island: Special Edition": "MI1 SE",
                       "Thimbleweed Park": "TWP", "Broken Sword: The Shadow of the Templars": "BS1",
-                      "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R"]
+                      "Broken Sword: Shadow of the Templars – Reforged": "BS1 Reforged", "Broken Sword 2: Remastered": "BS2R",
+                      "Flight of the Amazon Queen": "FOTAQ"]
         guard let n = gameFullName(url) else { return nil }
         return (n, shorts[n] ?? n)
     }
@@ -254,6 +260,7 @@ final class SoundBank: @unchecked Sendable {
         if url.pathExtension.lowercased() == "aud", let n = Sierra.gameName(dir: dir) { return n }
         if GGPack.isPack(url) { return "Thimbleweed Park" }
         if Sword1.isSpeech(url) { return "Broken Sword: The Shadow of the Templars" }
+        if Queen.isQueen(url) { return "Flight of the Amazon Queen" }
         if Aufs.isSpeech(url) { return Aufs.isReforged(url) ? "Broken Sword: Shadow of the Templars – Reforged" : "Broken Sword 2: Remastered" }
         if url.pathExtension.lowercased() == "m4b", Grime.isGame(names: names) { return "Escape from Monkey Island" }
         if url.pathExtension.lowercased() == "xwb" {
