@@ -18,6 +18,9 @@ enum Bs2 {
         "geo": "George", "nic": "Nico", "rio": "Rio", "dne": "Duane", "prl": "Pearl", "oub": "Oubier", "gls": "Glease",
         "pab": "Pablo", "mig": "Miguel", "tit": "Titipoco", "lob": "Lobineau", "hwk": "Hawks", "hku": "Haiku", "fos": "Foster",
         "shm": "Shaman", "wtr": "Waiter", "grd": "Guard", "jap": "Tourist", "gnl": "General", "brt": "Bert", "cam": "Cameraman",
+        "old": "Ketch", "brn": "Bronson", "ren": "Renaldo", "cch": "Concha", "prs": "Presidenta", "von": "Karzac", "gen": "Rosso",
+        "crt": "Critic", "att": "Curator", "way": "Missionary", "shr": "Actress", "bnd": "Band", "sh": "Trader", "sac": "Dogguard",
+        "emy": "Girl", "ig": "Indian",
     ]
 
     static func le32(_ d: Data, _ p: Int) -> Int {
