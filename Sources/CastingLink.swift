@@ -43,6 +43,10 @@ enum CastingLink {
         "rum": "Rum Rogers", "ozz": "Ozzie Mandrill", "cha": "Charles L. Charles",
         "larry": "Larry Laffer", "joe": "Joe King", "guybrush": "Guybrush", "elaine": "Elaine", "lechuck": "LeChuck", "morgan": "Morgan LeFlay", "winslow": "Winslow", "ray": "Agent Ray", "reyes": "Agent Reyes", "delores": "Delores", "ransome": "Ransome", "franklin": "Franklin",
         "gt": "Guybrush", "lc": "LeChuck", "mr": "Murray", "wy": "Wally", "kn": "Kenny Falmouth", "hm": "Haggis McMutton",
+        "george": "George Stobbart", "nico": "Nico Collard", "rio": "Rio", "duane": "Duane Henderson", "pearl": "Pearl Henderson",
+        "oubier": "Oubier", "glease": "Glease", "pablo": "Pablo", "miguel": "Miguel", "titipoco": "Titipoco", "lobineau": "André Lobineau",
+        "hawks": "Hawks", "haiku": "Haiku McEwan", "foster": "Robert Foster", "shaman": "Shaman", "waiter": "Waiter", "guard": "Guard",
+        "tourist": "Japanese tourist", "general": "General", "bert": "Bert", "cameraman": "Cameraman",
     ]
     /// Noms donnés par l'utilisateur, par jeu (préfixe → personnage), retenus d'un envoi à l'autre.
     static func speakers(game: String) -> [String: String] {

@@ -30,6 +30,7 @@ enum Aufs {
         var out: [Line] = []
         out.reserveCapacity(n)
         let reforged = isReforged(url)
+        let who = reforged ? [:] : Bs2.speakers(near: url)
         var entries: [(id: Int, off: Int, size: Int)] = []
         for i in 0 ..< n {
             let e = 8 + i * 12
@@ -38,7 +39,7 @@ enum Aufs {
         }
         for e in entries.sorted(by: { $0.id < $1.id }) {
             var l = Line(id: out.count + 1, offset: e.id, start: e.off, length: e.size, rate: 0, duration: 0)
-            l.name = reforged ? String(format: "%03d-%04d", e.id >> 16, e.id & 0xFFFF) : String(format: "%05d", e.id)
+            l.name = reforged ? String(format: "%03d-%04d", e.id >> 16, e.id & 0xFFFF) : Bs2.lineName(e.id, code: who[e.id])
             out.append(l)
         }
         return out

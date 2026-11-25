@@ -345,6 +345,19 @@ do {
     var c: [UInt8] = [56, 0, 0, 0, 0, 0, 0, 0] + Array("lText Resource 1".utf8) + [UInt8](repeating: 0, count: 16)
     c += [1, 0, 0, 0, 21, 0, 0, 0, 0x31, 0x0C] + [0x48, 0, 0x69, 0, 0, 0] + [8, 0, 0, 0, 48, 0, 0, 0]
     check(Aufs.remasteredTexts(Data(c)) == [0x0C31: "Hi"], "textes BS2 Remastered (numéro de voix)")
+    var clu: [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
+    var idx: [UInt8] = []
+    for n in ["lText Resource 5", "lText Resource 9", "lText Resource 3"] {
+        let o = clu.count
+        clu += Array(n.utf8) + [UInt8](repeating: 0, count: 32 - n.utf8.count)
+        idx += [UInt8(o), 0, 0, 0, 32, 0, 0, 0]
+    }
+    clu[0] = UInt8(clu.count); clu += idx
+    var exe = [UInt8](repeating: 0xEE, count: 48) + [UInt8](repeating: 0, count: 16 * 12)
+    for (id, k) in [(5, 0), (9, 1), (3, 2)] { exe[48 + 16 * id] = UInt8(k); exe[48 + 16 * id + 1] = 0; exe[48 + 16 * id + 2] = 13; exe[48 + 16 * id + 3] = 0 }
+    check(Bs2.resourceTable(exe: Data(exe), texts: Data(clu)) == 48, "BS2 Remastered : table des ressources")
+    check(Bs2.lineName(3121, code: "geo") == "George_03121" && Bs2.lineName(7, code: "gnl") == "General_00007" && Bs2.lineName(8, code: "xyz") == "XYZ_00008"
+          && CastingLink.prefix("George_03121") == "george", "BS2 Remastered : noms des répliques")
 } catch { check(false, "AUFS : \(error)") }
 
 // MARK: 3 sexies sexies. Flight of the Amazon Queen (queen.1c)
