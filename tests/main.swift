@@ -317,6 +317,18 @@ do {
     check(CastingLink.prefix("RAY_20002") == "ray" && CastingLink.speakers(game: "test-twp")["ray"] == "Agent Ray", "personnages")
 }
 
+// MARK: 3 sexies quater. Broken Sword (speech1.clv)
+print("3 sexies quater. Broken Sword")
+do {
+    // en-tête de 24 octets : taille, scène 0 → mot 2 ; répliques : (24, 4) puis (28, 4) ; données « OggSOggS »
+    var w: [UInt32] = [24, 8, 24, 4, 28, 4]
+    var d = Data(bytes: &w, count: 24)
+    d.append(contentsOf: Array("OggSOggS".utf8))
+    let lines = try Sword1.parse(d)
+    check(lines.count == 2 && lines[1].name == "000-0001" && lines[1].offset == 1 && lines[1].start == 28, "table des scènes et des répliques")
+    check(Sword1.sections.count == 68 && Sword1.sections.last == 146, "sections de text.clu")
+} catch { check(false, "Broken Sword : \(error)") }
+
 // MARK: 3 septies. Envoi vers mCASTING (paquets de la boîte de réception)
 print("3 septies. Envoi vers mCASTING")
 check(CastingLink.prefix("GUY_4_shore_11_1") == "guy" && CastingLink.prefix("clatri001") == "cla" && CastingLink.prefix("") == ""

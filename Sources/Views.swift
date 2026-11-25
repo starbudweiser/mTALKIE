@@ -111,7 +111,7 @@ struct FileCard: View {
             SectionTitle(L("side.file"))
             Text(bank.url.lastPathComponent).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.middle)
                 .help(bank.url.path)
-            KV(k: L("info.format"), v: bank.codec == .voc ? L("info.voc") : bank.codec == .xwb ? bank.xwbFormat : bank.codec == .bun ? "iMUSE BUN" : bank.codec == .aud ? "Sierra SOL" : bank.codec == .lab ? "GrimE VIMA" : bank.codec == .gg ? "Ogg Vorbis (ggpack)" : bank.codec.rawValue.uppercased())
+            KV(k: L("info.format"), v: bank.codec == .voc ? L("info.voc") : bank.codec == .xwb ? bank.xwbFormat : bank.codec == .bun ? "iMUSE BUN" : bank.codec == .aud ? "Sierra SOL" : bank.codec == .lab ? "GrimE VIMA" : bank.codec == .gg ? "Ogg Vorbis (ggpack)" : bank.codec == .sword1 ? "Broken Sword (\(bank.url.pathExtension.uppercased()))" : bank.codec.rawValue.uppercased())
             KV(k: L("info.lines"), v: store.lines.count.formatted(.number.locale(Loc.locale)))
             KV(k: L("info.duration"), v: pending ? L("info.pending") : Fmt.long(store.lines.reduce(0) { $0 + $1.duration }))
             KV(k: L("info.rate"), v: rate)
